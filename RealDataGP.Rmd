@@ -1,0 +1,1218 @@
+---
+title: "RealDataGP"
+author: "tara"
+date: "7/30/2021"
+output: html_document
+---
+## Update 08/6/21 we are not using the winter flounder data anymore. 
+## Update 08/16/21 we have decided it is appropriate to manually scale the data. 
+    We are using RIVER RETURNS for the salmon data. 
+    We took out the model comparison using the fitGP function, and are just going with ARD. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(knitr.kable.NA = '')
+```
+
+https://github.com/tanyalrogers/GPEDM
+```{r}
+#install.packages("devtools") #if required
+#devtools::install_github("tanyalrogers/GPEDM") #update frequently
+
+library(dplyr)
+library(tidyverse)
+library(purrr)
+library(ggplot2)
+library(rEDM)
+library(GPEDM)
+library(Metrics)
+library(kableExtra)
+library(corrplot)
+
+source("BestEmbedFunctions.R")
+```
+
+##**Data Sources and descriptions:**## 
+
+**Striped Bass - long lived species**
+1987-2017
+```{r}
+CTAAA <- read.csv("CTtrawlabundanceage19872017.csv", header = TRUE)
+
+#we are getting rid of the 15+ category
+CTAAA <-CTAAA[,2:16]
+
+```
+
+**OPTION TO MULTIPLY BY CATCH PER YEAR TO GET ACTUAL NUMBERS**
+```{r}
+### import the data from CTLISTS @@@
+CTLISTSraw <-read.csv("SB_dataming.csv", header=T)
+
+CTLISTS <-filter(CTLISTSraw, Year > 1986 & Year < 2018) #filter dataset to 1987-2017
+
+#everything lumped by year
+###biomass is not totally reliable because there are some instances of fish that were not weighed. 
+SBperyear <-CTLISTS %>% group_by(Year)%>%
+  summarize(ntows=n_distinct(Sample.Number),ncaught=sum(TotalCount),biomasskg=sum(TotalWeight..kg))
+
+#standardize the ntows that are not 200 tows to 200 tows. 
+SBperyear <-mutate(SBperyear, ncaughtfix=ncaught*200/ntows, biomasskgfix=biomasskg*200/ntows)
+
+NumAage <- dplyr::select(SBperyear, Year,ncaughtfix,biomasskgfix)%>%full_join(CTAAA)%>%as.data.frame()%>%
+ pivot_longer(cols=4:17, names_to="age_class",values_to = "value")%>%mutate(CatchAtAge=ncaughtfix*value,WeightAtAge=biomasskgfix*value)
+
+pivSB <-NumAage%>%mutate(age_class=as.factor(age_class))%>%as.data.frame()%>%
+ mutate(age_class = fct_relevel(age_class, c("X1","X2","X3","X4","X5","X6","X7","X8","X9","X10","X11","X12","X13","X14")))
+pivSB$age <- fct_recode(pivSB$age_class,"age 1"="X1","age 2"="X2","age 3"="X3","age 4"="X4","age 5"="X5","age 6" ="X6","age 7"="X7","age 8" ="X8","age 9"="X9","age 10"="X10","age 11"="X11","age 12"="X12","age 13"="X13","age 14"="X14")
+
+#### AT THIS POINT, DECIDE NUMBERS AT AGE OR WEIGHT AT AGE ######
+#I tried numbers at age and weight at age, and weight at age produces better predictions than both numbers at age or not doing anything ###
+CTAAA <-dplyr::select(pivSB, Year, WeightAtAge,age_class)%>%
+  pivot_wider(id_cols="Year", names_from = "age_class", values_from = "WeightAtAge")
+```
+
+**if just using the proportional index, skip the block above and start back here**
+```{r}
+pivSB <-pivot_longer(CTAAA,cols=2:15, names_to="age_class",values_to = "value")%>%
+  mutate(age_class=as.factor(age_class))%>%as.data.frame()%>%mutate(age_class = fct_relevel(age_class, c("X1","X2","X3","X4","X5","X6","X7","X8","X9","X10","X11","X12","X13","X14")))%>%filter(age_class !="X15.")
+pivSB$age <- fct_recode(pivSB$age_class,"age 1"="X1","age 2"="X2","age 3"="X3","age 4"="X4","age 5"="X5","age 6" ="X6","age 7"="X7","age 8" ="X8","age 9"="X9","age 10"="X10","age 11"="X11","age 12"="X12","age 13"="X13","age 14"="X14")
+
+#create an abundance index from all age classes 
+
+SB_Ntotal <-mutate(CTAAA, N_total=X1+X2+X3+X4+X5+X5+X6+X7+X8+X9+X10+X11+X12+X13+X14, age_class="N_total")%>%dplyr::select(Year, N_total, age_class)%>%as.data.frame()
+
+#plot by year
+pivSB%>% filter(age_class != "X15.")%>% ggplot(aes(Year,value))+
+ geom_line()+ facet_wrap(~age, scales="free")+ theme_classic()
+```
+
+**Create the lagged correlation matrix for striped bass**
+```{r}
+blockSB <-CTAAA[1:15]
+
+#We are really only interested in 1987-end
+sblock <-make_block(blockSB,max_lag = 14, tau=1)
+  sblock2 <-dplyr::select(sblock, "X1(t+0)", "X2(t+1)","X3(t+2)","X4(t+3)","X5(t+4)","X6(t+5)","X7(t+6)","X8(t+7)","X9(t+8)","X10(t+9)","X11(t+10)","X12(t+11)","X13(t+12)","X14(t+13)")
+   sblock3 <-dplyr::select(sblock, "X1(t+0)", "X2(t+0)","X3(t+0)","X4(t+0)","X5(t+0)","X6(t+0)","X7(t+0)","X8(t+0)","X9(t+0)","X10(t+0)","X11(t+0)","X12(t+0)","X13(t+0)","X14(t+0)")
+   
+names(sblock2) <-c("age1 (t+0)", "age2 (t+1)","age3(t+2)","age4 (t+3)","age5 (t+4)","age6 (t+5)","age7 (t+6)","age8 (t+7)","age9 (t+8)","age10 (t+9)","age11 (t+10)","age12 (t+11)","age13 (t+12)","age14 (t+13)")   
+   
+M <-cor(sblock2, use="pairwise.complete.obs")
+corrplot(M, type="upper", method="color", title="", mar=c(0,0,2,0), addCoef.col = 'black', diag=F,tl.col = "black")
+
+corlist <-t(combn(colnames(M),2))
+M2 =data.frame(corlist, dist=M[corlist])
+length(M2$dist) == length(unique(M2$dist))
+mean(M2$dist)
+sd(M2$dist)
+
+#can't save corrplots for some reason. 
+```
+
+
+#### **LOG THE DATA** ########## REMEMBER TO TURN THIS ON AND OFF #############
+```{r}
+#pivSB <-mutate(pivSB, value=log(value+1))
+#SB_Ntotal <-mutate(SB_Ntotal, N_total=log(N_total+1))
+```
+
+
+**SB fits across a grid of E and tau**
+```{r}
+Ees <-seq(2,10,1)
+taus <-seq(1,3,1)
+var_pairs = expand.grid(Ees, taus) # Combinations of vars, 2 at a time
+ETdf <-matrix(nrow=dim(var_pairs)[1],ncol=4)
+ETdf[,1]<-var_pairs[,1]
+ETdf[,2]<-var_pairs[,2]
+r2matrixSB = array(NA, dim = c(length(Ees), length(taus)), dimnames = list(Ees,taus)) 
+rmsematrixSB = array(NA, dim = c(length(Ees), length(taus)), dimnames = list(Ees,taus)) 
+for (i in 1:nrow(var_pairs)) {
+   try({
+  fitSB <-fitGP(data = pivSB, yd = "value", pop="age_class",scaling = "local", E=var_pairs[i,1], tau=var_pairs[i,2], predictmethod = "loo")
+  fitSB_r2 <-fitSB$outsampfitstats[[1]]
+  fitSB_rmse <-fitSB$outsampfitstats[[2]]
+r2matrixSB[var_pairs[i,1], var_pairs[i,2]] = fitSB_r2
+ETdf[i,3] <-fitSB_r2
+ETdf[i,4] <-fitSB_rmse
+rmsematrixSB[var_pairs[i,1], var_pairs[i,2]] = fitSB_rmse
+},silent=T)
+}
+r2matrixSB
+rmsematrixSB
+
+
+ETdf <-as.data.frame(ETdf)
+names(ETdf)<-c("E","tau","OOS_R2","OOS_RMSE")
+
+#round(r2matrixSB,4) %>% 
+ # kbl()%>%kable_classic(full_width = F, html_font = "Cambria")
+
+#R- squared. 
+ETdf %>%
+  filter(E != 10)%>%
+ggplot(aes(E,tau,label=round(OOS_R2,2)))+
+  geom_tile(aes(fill=OOS_R2), show.legend = TRUE)+
+  scale_fill_gradient(low="white",high="blue")+
+  scale_x_discrete(limits=seq(2,9,1))+
+  geom_text()+
+  xlab("embedding dimension")+ylab("tau")+
+  guides(fill=guide_colorbar(title="r-squared"))+
+  theme_bw()+
+  theme(axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        panel.background = element_rect(fill = "transparent", colour = "black"),
+        strip.background =element_rect(fill="white"),
+         panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank())
+
+#ggsave("r2ETSBBIOM.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#dev.off()
+
+#RMSE. 
+ETdf %>%
+  filter(E != 10)%>%
+ggplot(aes(E,tau,label=round(OOS_RMSE,2)))+
+  geom_tile(aes(fill=OOS_RMSE), show.legend = TRUE)+
+  scale_fill_gradient(low="blue",high="white")+
+  scale_x_discrete(limits=seq(2,9,1))+
+  geom_text()+
+  xlab("embedding dimension")+ylab("tau")+
+  guides(fill=guide_colorbar(title="RMSE"))+
+  theme_bw()+
+  theme(axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        panel.background = element_rect(fill = "transparent", colour = "black"),
+        strip.background =element_rect(fill="white"),
+         panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank())
+
+ggsave("RMSE_ETSBBIOM.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#dev.off()
+
+```
+
+**Now that we have determined that the best E = 9 and the best tau = 1, let's redo this**
+**Fit striped bass Models** fit using ARD, previous model comparison code is in outtakes. 
+```{r}
+maxE <-9
+
+#NTOTAL
+#manually globally scaled data
+SB_Ntotal_final <-fitGP(data = SB_Ntotal, yd = "N_total", pop="age_class",scaling = "local", E=maxE, tau=1, predictmethod = "loo")
+
+#age structure
+SBage_final <-fitGP(data = pivSB, yd = "value", pop="age_class",scaling = "local", E=maxE, tau=1, predictmethod = "loo")
+
+#**Individual age GP for SB**
+SB_ages <-indv_age(pivSB,"local")%>%mutate(model="SB_ages")
+```
+
+**extract fitstats striped bass**
+```{r}
+#extract fitstats for striped bass
+outsamp <-bind_rows(SBage_final$outsampfitstats,SB_Ntotal_final$outsampfitstats)
+names(outsamp) <-c("OOS_R2","OOS_rmse")
+insamp <-bind_rows(SBage_final$insampfitstats,SB_Ntotal_final$insampfitstats)
+rhos <-c(tail(SBage_final$pars,1), tail(SB_Ntotal_final$pars,1))
+fitstats <-bind_cols(outsamp,insamp,rhos)%>%as.data.frame()
+rownames(fitstats) <-c("SB_ageStruc","SB_Ntotal")
+colnames(fitstats)[8]<-"rho"
+fitstats <-rownames_to_column(fitstats, var="model")%>%mutate(`age class`="all")%>% mutate(across(OOS_R2:df, as.numeric))
+
+#fitstats individual ages striped bass
+SB_fitstats <- mutate(SB_ages, across(OOS_R2:df, as.numeric))%>%mutate(`age class`=as.character(`age class`))%>%bind_rows(fitstats)%>%
+  mutate(across(OOS_R2:df, round,4))
+#print to table. 
+SB_fitstats%>% 
+  #filter(model=="SB_ageStruc")%>%
+  kbl()%>%kable_classic(full_width = F, html_font = "Cambria")
+
+#write.csv(SB_fitstats, file="SB_fitstatsE9.csv")
+```
+
+**Visualize fits over data & combine with N-total fit and additive fit**
+```{r}
+SBallresults <-full_join(SBage_final$outsampresults, SBage_final$insampresults, by=c("timestep","pop","obs"))
+
+#create a total index of all the age classes added
+sumtotal <-SBallresults %>% group_by(timestep)%>%
+  summarise(pop="aggregate", predmean.x=sum(predmean.x), obs=sum(obs), predfsd.x=sqrt(sum((predsd.x^2))))
+
+SBallresults <-bind_rows(SBallresults, sumtotal)
+
+SBallresults$age <- fct_recode(SBallresults$pop,"age 1"="X1","age 2"="X2","age 3"="X3","age 4"="X4","age 5"="X5","age 6" ="X6","age 7"="X7","age 8" ="X8","age 9"="X9","age 10"="X10","age 11"="X11","age 12"="X12","age 13"="X13","age 14"="X14", "aggregate"="aggregate")
+
+SBNTOTALresults <-full_join(SB_Ntotal_final$outsampresults, SB_Ntotal_final$insampresults, by=c("timestep","pop","obs"))%>%mutate(age="total abundance")
+
+SBallresults <-bind_rows(SBallresults,SBNTOTALresults)%>% mutate(year = timestep+1986)
+
+SBallresults$age <-fct_relevel(SBallresults$age, c("age 1","age 2","age 3","age 4","age 5","age 6","age 7","age 8","age 9","age 10","age 11","age 12","age 13","age 14","aggregate","total abundance"))
+
+#SB
+SBallresults%>%
+  #filter(age !="total abundance")%>% #filter out N-total
+  #filter(age =="aggregate")%>% 
+ggplot() +
+  facet_wrap(age~., scales = "free") +
+  geom_line(aes(x=year,y=predmean.x)) + #out of sample
+  #geom_line(aes(x=timestep,y=predmean.y),lty="dashed") + #insample
+  geom_ribbon(aes(x=year,y=predmean.x,ymin=predmean.x-predfsd.x,ymax=predmean.x+predfsd.x), alpha=0.4,fill="#03C0C1") + #out of sample
+  #geom_ribbon(aes(x=timestep,y=predmean.y, ymin=predmean.y-predfsd.y,ymax=predmean.y+predfsd.y), alpha=0.4,fill="#007F80") + #in sample
+  geom_point(aes(x=year, y=obs)) +
+  theme_classic()
+
+ggsave("SBfitoverdataE9allAgg.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+dev.off()
+```
+
+
+**find the three versions of r2**
+```{r}
+#overall hierarchical model r2
+SBage_final$outsampfitstats
+
+#total abundance index r2
+SB_Ntotal_final$outsampfitstats
+
+#aggregate r2
+aggr2 <- rsq(obs=sumtotal$obs,preds=sumtotal$predmean.x, time_step=sumtotal$timestep)
+aggr2
+
+#try another way
+grandmean = mean(sumtotal$obs)
+sumtotal2 <-as.data.frame(sumtotal)%>% filter(!is.na(predmean.x))%>%mutate(SSR=(obs-predmean.x)^2,SST=(obs-grandmean)^2)
+
+rsquared = 1-((sum(sumtotal2$SSR))/(sum(sumtotal2$SST)))
+rsquared
+```
+that seems really wrong. but ok. 
+
+
+**SB Ntotal fit over data**
+```{r}
+SBNTOTALresults <-full_join(SB_Ntotal_final$outsampresults, SB_Ntotal_final$insampresults, by=c("timestep","pop","obs"))
+
+SBNTOTALresults <-mutate(SBNTOTALresults, year = timestep+1986, age="N_total")
+
+#SB
+ggplot(SBNTOTALresults) +
+  facet_wrap(age~., scales = "free") +
+  geom_line(aes(x=year,y=predmean.x)) + #out of sample
+  #geom_line(aes(x=timestep,y=predmean.y),lty="dashed") + #insample
+  geom_ribbon(aes(x=year,y=predmean.x,ymin=predmean.x-predfsd.x,ymax=predmean.x+predfsd.x), alpha=0.4,fill="#03C0C1") + #out of sample
+  #geom_ribbon(aes(x=timestep,y=predmean.y, ymin=predmean.y-predfsd.y,ymax=predmean.y+predfsd.y), alpha=0.4,fill="#007F80") + #in sample
+  geom_point(aes(x=year, y=obs)) +
+  theme_classic()
+
+#ggsave("SBNTOTALfitoverdataE9.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#dev.off()
+
+```
+
+**extract pairwise rho for all age classes SB** 
+```{r}
+#maxE <-round(sqrt(2017-1987))
+maxE =9
+vars = colnames(CTAAA[2:15])
+var_pairs = combn(vars, 2) # Combinations of vars, 2 at a time
+rho_matrixSB = array(NA, dim = c(length(vars), length(vars)), dimnames = list(vars,vars)) 
+for (i in 1:ncol(var_pairs)) {
+  df = filter(SB, age_class %in% c(var_pairs[1,i], var_pairs[2,i]))
+fitSB <-fitGP(data = df, yd = "value", pop="age_class",scaling = "local", E=maxE, tau=1, predictmethod = "loo")
+  fitSB_rho <-tail(fitSB$pars,1)
+rho_matrixSB[var_pairs[1,i], var_pairs[2,i]] = fitSB_rho
+}
+rho_matrixSB
+round(rho_matrixSB,4) %>% 
+  kbl()%>%kable_classic(full_width = F, html_font = "Cambria")
+
+rownames(rho_matrixSB)<-c("age1","age2","age3","age4","age5","age6","age7","age8","age9","age10","age11","age12","age13","age14")
+colnames(rho_matrixSB)<-c("age1","age2","age3","age4","age5","age6","age7","age8","age9","age10","age11","age12","age13","age14")
+
+corrplot(rho_matrixSB, method="color", type="upper", diag=FALSE, is.corr = TRUE,mar=c(0,0,2,0),addCoef.col = 'black',tl.col = "black")
+
+#mean and SD of dynamic correlation
+mean(rho_matrixSB[!is.na(rho_matrixSB)])
+sd(rho_matrixSB[!is.na(rho_matrixSB)])
+```
+
+**Individual age comparison**
+```{r}
+maxE <-9
+
+#Individual age GP for SB
+SB_ages <-indv_age(pivSB,"local")%>%mutate(model="SB_indvAge")
+
+#mixed age GP for SB
+SB_mixed <-mixed_age(pivSB,maxE)%>%mutate(model="SB_mixedAge")
+
+#hierarchical model, but extract individual age info.. somehow. 
+SB_hier <-fitGP(data = pivSB, yd = "value", pop="age_class",scaling = "local", E=maxE, tau=1, predictmethod = "loo")
+
+#extract individual age from hierarchical model
+outsamp <-bind_cols(SB_hier$outsampfitstatspop$R2pop,SB_hier$outsampfitstatspop$rmsepop)
+names(outsamp) <-c("OOS_R2","OOS_rmse")
+insamp <-bind_cols(SB_hier$insampfitstatspop$R2pop,SB_hier$insampfitstatspop$rmsepop)
+names(insamp) <-c("R2","rmse")
+fitstats_SBHier <-cbind(outsamp, insamp)
+fitstats_SBHier <-mutate(fitstats_SBHier, model="SB_Hier")%>%rownames_to_column("age")
+
+#extract individual age fitstats from individual age model
+fitstats_SBIndvAge <- mutate(SB_ages, across(OOS_R2:df, as.numeric))%>%rownames_to_column("age")
+
+#extract mixed age fitstats from mixed age model
+fitstats_SBMixed <- mutate(SB_mixed, across(OOS_R2:df, as.numeric))%>%rownames_to_column("age")
+```
+
+**time series length test** 
+adapted so that you start randomly from all the years. 
+```{r}
+## VARIED E CHOICE ###
+#inputs
+vars = unique(pivSB$Year)
+var_pairs = combn(vars, 2) # Combinations of vars, 2 at a time
+var_pairs <-as.data.frame(t(var_pairs))%>%mutate(diff=abs(V1-V2))%>%filter(diff>=5) #every possible ts length > 5
+#outputs
+modstatsSB_v<-matrix(nrow=nrow(var_pairs),ncol=3)
+modstatsSB_v <-as.data.frame(modstatsSB_v)
+modstatsSB_v<-bind_cols(var_pairs,modstatsSB_v)
+names(modstatsSB_v) <-c("startYear","endYear","tslength","OOS_R2","OOS_rmse","maxE")
+
+for (i in 1:nrow(var_pairs)){
+   try({
+  shortSB <-filter(pivSB, Year >= var_pairs[i,1] & Year <= var_pairs[i,2]) #filter for time segment between start and end year. 
+  maxE <-round(sqrt(abs(var_pairs[i,1]-var_pairs[i,2]))) #varying maxE
+  mod <-fitGP(data = shortSB, yd = "value", pop="age_class",scaling = "local", E=maxE, tau=1, predictmethod = "loo")
+  modstatsSB_v[i,4] <-mod$outsampfitstats[1]
+  modstatsSB_v[i,5] <-mod$outsampfitstats[2]
+  modstatsSB_v[i,6] <-maxE
+   },silent=T)
+}
+modstatsSB_v <-as.data.frame(modstatsSB_v)%>%mutate(e_choice="varied")
+
+### CONSTANT MAX E #####################
+#inputs
+vars = unique(pivSB$Year)
+var_pairs = combn(vars, 2) # Combinations of vars, 2 at a time
+var_pairs <-as.data.frame(t(var_pairs))%>%mutate(diff=abs(V1-V2))%>%filter(diff>=5) #every possible ts length > 5
+#outputs
+modstatsSB<-matrix(nrow=nrow(var_pairs),ncol=3)
+modstatsSB <-as.data.frame(modstatsSB)
+modstatsSB<-bind_cols(var_pairs,modstatsSB)
+names(modstatsSB) <-c("startYear","endYear","tslength","OOS_R2","OOS_rmse","maxE")
+
+for (i in 1:nrow(var_pairs)){
+   try({
+  shortSB <-filter(pivSB, Year >= var_pairs[i,1] & Year <= var_pairs[i,2]) #filter for time segment between start and end year. 
+  maxE = 3
+  mod <-fitGP(data = shortSB, yd = "value", pop="age_class",scaling = "local", E=maxE, tau=1, predictmethod = "loo")
+  modstatsSB[i,4] <-mod$outsampfitstats[1]
+  modstatsSB[i,5] <-mod$outsampfitstats[2]
+  modstatsSB[i,6] <-maxE
+   },silent=T)
+}
+modstatsSB <-as.data.frame(modstatsSB)%>%mutate(e_choice="constant")
+
+##Combine
+modstatsSB <-bind_rows(modstatsSB, modstatsSB_v)
+
+#now summarize by time series length and e_choice
+modstatsSBsum <- na.omit(modstatsSB) %>% group_by(tslength,e_choice)%>%summarize(avOOS_R2=mean(OOS_R2,na.rm=T), sdR2=sd(OOS_R2,na.rm=T), avOOS_rmse=mean(OOS_rmse,na.rm=T), sdrmse=sd(OOS_rmse,na.rm=T), .groups="keep")
+```
+
+
+######################################################################################################################################################################################################## **Klamath falls salmon age structure***
+
+brood.yr  = calendar year that parental spawners returned to the river and spawned
+calendar.yr = year of river return for progeny of the brood year
+age = calendar.yr - brood.yr
+ocean.ER =  ocean fishery exploitation rate.  The proportion of ocean abundance killed by fishing
+mat.rate = maturation rate.  The proportion of fish at age-a in the ocean (after fisheries) that matured and returned to freshwater
+river.return = the number of fish at age-a that entered the Klamath River
+escapement = the number of fish that entered the Klamath River, survived migration up the river, and spawned in the wild or was taken into a hatchery for broodstock.
+
+*so we are going to say brood year is the year class and age is age.*
+The abundance is then escapement or is it river return? We will do both. Let's start with escapement. The issue here is that we are missing a stage in the life, the year ones. we have ages 2,3,4,5, but not what is happening with year 1 & 2. Unless we can somehow reconstruct them from the other info? but maybe this is part of the fun. 
+
+1984-2016... but age 5 is missing in 1994 (what to do?)
+
+```{r}
+KRFC <- read.csv("KRFC.csv", header = TRUE)
+
+##################CHANGE TO 1986 to 2016 so it will be 30 YEARS
+#escapement dataset
+KRFC.esc <-dplyr::select(KRFC, calendar.yr, age, escapement)%>%filter(calendar.yr > 1985 & calendar.yr <2017)
+esc.wide <-pivot_wider(KRFC.esc, id_cols="calendar.yr", names_from = "age", values_from = "escapement")%>%as.data.frame()
+names(esc.wide)<-c("Year","X2","X3","X4","X5")
+#create an abundance index from all age classes
+esc.Ntotal <-mutate(esc.wide, N_total=X2+X3+X4+X5,age_class="N_total")%>%dplyr::select(Year, N_total, age_class)
+
+#################CHANGE TO 1986 to 2016 so it will be 30 YEARS
+esc.wide = filter(esc.wide, Year >1985 & Year < 2017)
+esc.Ntotal = filter(esc.Ntotal, Year >1983 & Year < 2017)
+KRFC.esc <-filter(KRFC.esc, calendar.yr > 1983 & calendar.yr < 2017)%>%dplyr::rename("Year"=calendar.yr, "age_class"=age, "value"=escapement)
+
+KRFC.esc %>%
+  ggplot(aes(Year,value))+
+  geom_line()+
+  facet_wrap(~age_class,scales="free")+
+  theme_classic()
+```
+
+
+**Create the lagged correlation matrix for KRFC**
+```{r}
+
+#We are really only interested in 1987-end
+krblock <-make_block(esc.wide,max_lag = 4, tau=1)
+  krblock2 <-dplyr::select(krblock, "X2(t+0)","X3(t+1)","X4(t+2)","X5(t+3)")
+   
+names(krblock2) <-c("age2 (t+0)", "age3 (t+1)","age4(t+2)","age5 (t+3)")   
+   
+M <-cor(krblock2, use="pairwise.complete.obs")
+corrplot(M, type="upper", method="color", title="", mar=c(0,0,2,0), addCoef.col = 'black', diag=F,tl.col = "black")
+
+
+corlist <-t(combn(colnames(M),2))
+M2 =data.frame(corlist, dist=M[corlist])
+length(M2$dist) == length(unique(M2$dist))
+mean(M2$dist)
+sd(M2$dist)
+#GG save doesn't work for corrplots
+#ggsave("KRLaggedCOrr.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#dev.off()
+```
+
+**extract pairwise dynamic rho for all age classes KRFC** 
+```{r}
+#maxE <-round(sqrt(2017-1987))
+maxE =6
+vars = seq(2,5,1)
+var_pairs = combn(as.factor(vars), 2) # Combinations of vars, 2 at a time
+rho_matrixKR = array(NA, dim = c(length(vars), length(vars)), dimnames = list(vars,vars)) 
+for (i in 1:ncol(var_pairs)) {
+  df = filter(KRFC.esc, age_class %in% c(var_pairs[1,i], var_pairs[2,i]))%>%
+    mutate(age_class=as.factor(age_class))
+fitKR <-fitGP(data = df, yd = "value", pop="age_class",scaling = "local", E=maxE, tau=1, predictmethod = "loo")
+  fitKR_rho <-tail(fitKR$pars,1)
+rho_matrixKR[var_pairs[1,i], var_pairs[2,i]] = fitKR_rho
+}
+rho_matrixKR
+round(rho_matrixKR,4) %>% 
+  kbl()%>%kable_classic(full_width = F, html_font = "Cambria")
+
+rownames(rho_matrixKR)<-c("age2","age3","age4","age5")
+colnames(rho_matrixKR)<-c("age2","age3","age4","age5")
+
+corrplot(rho_matrixKR, method="color", type="upper", diag=FALSE, is.corr = TRUE,mar=c(0,0,2,0),addCoef.col = 'black',tl.col = "black")
+
+#mean and SD of dynamic correlation
+mean(rho_matrixKR[!is.na(rho_matrixKR)])
+sd(rho_matrixKR[!is.na(rho_matrixKR)])
+```
+
+######### **LOG THE DATA** ########### REMEMBER TO TURN THIS OFF ####################
+```{r}
+#KRFC.esc=mutate(KRFC.esc,value=log(value+1))
+#esc.Ntotal=mutate(esc.Ntotal,N_total=log(N_total+1))
+```
+
+**fit the KRFC models**
+```{r}
+maxE <-round(sqrt(32))
+
+#NTOTAL
+#manually globally scaled data
+KRFC_Ntotal_final <-fitGP(data = esc.Ntotal, yd = "N_total", pop="age_class",scaling = "local", E=maxE, tau=1, predictmethod = "loo")
+
+#age structure
+KRFCage_final <-fitGP(data = KRFC.esc, yd = "value", pop="age_class",scaling = "local", E=maxE, tau=1, predictmethod = "loo")
+
+#**Individual age GP for SB**
+KRFC_ages <-indv_age(KRFC.esc,"local")%>%mutate(model="KRFC_ages")
+
+```
+
+**extract fitstats KRFC**
+```{r}
+#extract fitstats for KRFC
+outsamp <-bind_rows(KRFCage_final$outsampfitstats,KRFC_Ntotal_final$outsampfitstats)
+names(outsamp) <-c("OOS_R2","OOS_rmse")
+insamp <-bind_rows(KRFCage_final$insampfitstats,KRFC_Ntotal_final$insampfitstats)
+rhos <-c(tail(KRFCage_final$pars,1), tail(KRFC_Ntotal_final$pars,1))
+fitstats <-bind_cols(outsamp,insamp,rhos)%>%as.data.frame()
+rownames(fitstats) <-c("KRFC_ageStruc","KRFC_Ntotal")
+colnames(fitstats)[8]<-"rho"
+fitstats <-rownames_to_column(fitstats, var="model")%>%mutate(`age class`="all")%>% mutate(across(OOS_R2:df, as.numeric))
+#fitstats individual ages KRFC
+KRFC_fitstats <- mutate(KRFC_ages, across(OOS_R2:df, as.numeric))%>%mutate(`age class`=as.character(`age class`))%>%bind_rows(fitstats)%>%
+  mutate(across(OOS_R2:df, round,4))
+#print to table. 
+KRFC_fitstats%>% 
+  kbl()%>%kable_classic(full_width = F, html_font = "Cambria")
+
+write.csv(KRFC_fitstats, file="KRFC_fitstatsE6.csv")
+```
+
+**Plot models over data KRFC combined with Ntotal**
+```{r}
+KRFCallresults <-full_join(KRFCage_final$outsampresults, KRFCage_final$insampresults, by=c("timestep","pop","obs"))%>%mutate(age=paste("age ",as.character(pop)), pop=as.character(pop))
+
+#create a total index of all the age classes added
+sumtotalKRFC <-KRFCallresults %>% group_by(timestep)%>%
+  summarise(pop="aggregate", predmean.x=sum(predmean.x), obs=sum(obs), predfsd.x=sqrt(sum((predsd.x^2))))%>%
+  mutate(pop=as.character(pop),age="aggregate")
+
+KRFCallresults <-bind_rows(KRFCallresults, sumtotalKRFC)
+
+KRFCNTOTALresults <-full_join(KRFC_Ntotal_final$outsampresults, KRFC_Ntotal_final$insampresults, by=c("timestep","pop","obs"))%>%mutate(age="total abundance")
+
+KRFCallresults <-mutate(KRFCallresults, pop=as.character(pop))%>%bind_rows(KRFCNTOTALresults)%>% mutate(year = timestep+1986)
+
+
+KRFCallresults <-mutate(KRFCallresults, year=timestep+1983)
+
+#KRFC
+KRFCallresults%>%
+  #filter(age !="N_total")%>%
+ggplot() +
+  facet_wrap(age~., scales = "free") +
+  geom_line(aes(x=year,y=predmean.x)) + #out of sample
+  #geom_line(aes(x=timestep,y=predmean.y),lty="dashed") + #insample
+  geom_ribbon(aes(x=year,y=predmean.x,ymin=predmean.x-predfsd.x,ymax=predmean.x+predfsd.x), alpha=0.4,fill="#FA8072") + #out of sample
+  #geom_ribbon(aes(x=timestep,y=predmean.y, ymin=predmean.y-predfsd.y,ymax=predmean.y+predfsd.y), alpha=0.4,fill="red") + #in sample
+  geom_point(aes(x=year, y=obs)) +
+  theme_classic()
+
+ggsave("KRFCfitoverdataE6all.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+dev.off()
+```
+
+**find the three versions of r2**
+```{r}
+#overall hierarchical model r2
+KRFCage_final$outsampfitstats
+
+#total abundance index r2
+KRFC_Ntotal_final$outsampfitstats
+
+#aggregate r2
+aggr2 <- rsq(obs=sumtotalKRFC$obs,preds=sumtotalKRFC$predmean.x, time_step=sumtotalKRFC$timestep)
+aggr2
+
+#try another way
+grandmean = mean(sumtotalKRFC$obs)
+sumtotal2KRFC <-as.data.frame(sumtotalKRFC)%>% filter(!is.na(predmean.x))%>%mutate(SSR=(obs-predmean.x)^2,SST=(obs-grandmean)^2)
+
+rsquared = 1-((sum(sumtotal2KRFC$SSR))/(sum(sumtotal2KRFC$SST)))
+rsquared 
+#both ways work. 
+```
+works this time. 
+
+
+
+
+**plot the KRFC N-total fit**
+```{r}
+
+KRFCNTOTALresults <-full_join(KRFC_Ntotal_final$outsampresults, KRFC_Ntotal_final$insampresults, by=c("timestep","pop","obs"))
+
+KRFCNTOTALresults <-mutate(KRFCNTOTALresults, year=timestep+1983)
+
+#KRFC
+ggplot(KRFCNTOTALresults) +
+  facet_wrap(pop~., scales = "free") +
+  geom_line(aes(x=year,y=predmean.x)) + #out of sample
+  #geom_line(aes(x=timestep,y=predmean.y),lty="dashed") + #insample
+  geom_ribbon(aes(x=year,y=predmean.x,ymin=predmean.x-predfsd.x,ymax=predmean.x+predfsd.x), alpha=0.4,fill="#FA8072") + #out of sample
+  #geom_ribbon(aes(x=timestep,y=predmean.y, ymin=predmean.y-predfsd.y,ymax=predmean.y+predfsd.y), alpha=0.4,fill="red") + #in sample
+  geom_point(aes(x=year, y=obs)) +
+  theme_classic()
+
+#ggsave("KRFCNTOTALfitoverdataE6.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#dev.off()
+```
+
+
+**Re-do KRFC fits with a grid of E & tau**
+```{r}
+Ees <-seq(2,10,1)
+taus <-seq(1,3,1)
+var_pairs = expand.grid(Ees, taus) # Combinations of vars, 2 at a time
+KRFCETdf <-matrix(nrow=dim(var_pairs)[1],ncol=4)
+KRFCETdf[,1]<-var_pairs[,1]
+KRFCETdf[,2]<-var_pairs[,2]
+r2matrixKRFC = array(NA, dim = c(length(Ees), length(taus)), dimnames = list(Ees,taus)) 
+rmsematrixKRFC = array(NA, dim = c(length(Ees), length(taus)), dimnames = list(Ees,taus)) 
+for (i in 1:nrow(var_pairs)) {
+   try({
+  fitKRFC <-fitGP(data = KRFC.esc, yd = "value", pop="age_class",scaling = "local", E=var_pairs[i,1], tau=var_pairs[i,2], predictmethod = "loo")
+  fitKRFC_r2 <-fitKRFC$outsampfitstats[[1]]
+  fitKRFC_rmse <-fitKRFC$outsampfitstats[[2]]
+r2matrixKRFC[var_pairs[i,1], var_pairs[i,2]] = fitKRFC_r2
+KRFCETdf[i,3] <-fitKRFC_r2
+KRFCETdf[i,4] <-fitKRFC_rmse
+rmsematrixKRFC[var_pairs[i,1], var_pairs[i,2]] = fitKRFC_rmse
+},silent=T)
+}
+r2matrixKRFC
+rmsematrixKRFC
+
+
+KRFCETdf <-as.data.frame(KRFCETdf)
+names(KRFCETdf)<-c("E","tau","OOS_R2","OOS_RMSE")
+
+#round(r2matrixSB,4) %>% 
+ # kbl()%>%kable_classic(full_width = F, html_font = "Cambria")
+
+#R- squared. 
+KRFCETdf %>%
+  filter(E != 10)%>%
+ggplot(aes(E,tau,label=round(OOS_R2,2)))+
+  geom_tile(aes(fill=OOS_R2), show.legend = TRUE)+
+  scale_fill_gradient(low="white",high="blue")+
+  scale_x_discrete(limits=seq(2,9,1))+
+  geom_text()+
+  xlab("embedding dimension")+ylab("tau")+
+  guides(fill=guide_colorbar(title="r-squared"))+
+  theme_bw()+
+  theme(axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        panel.background = element_rect(fill = "transparent", colour = "black"),
+        strip.background =element_rect(fill="white"),
+         panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank())
+
+#ggsave("r2ETKRFC.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#dev.off()
+
+#RMSE. 
+KRFCETdf %>%
+  filter(E != 10)%>%
+ggplot(aes(E,tau,label=round(OOS_RMSE)))+
+  geom_tile(aes(fill=OOS_RMSE), show.legend = TRUE)+
+  scale_fill_gradient(low="blue",high="white")+
+  scale_x_discrete(limits=seq(2,9,1))+
+  geom_text()+
+  xlab("embedding dimension")+ylab("tau")+
+  guides(fill=guide_colorbar(title="RMSE"))+
+  theme_bw()+
+  theme(axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        panel.background = element_rect(fill = "transparent", colour = "black"),
+        strip.background =element_rect(fill="white"),
+         panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank())
+
+#ggsave("RMSE_ETKRFC.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#dev.off()
+
+
+
+```
+Turns out E=6 is a good embedding dimension for KRFC. 
+
+**Individual age comparison**
+```{r}
+maxE <-6
+
+#Individual age GP for SB
+KRFC_ages <-indv_age(KRFC.esc,"local")%>%mutate(model="KRFC_indvAge")
+
+#mixed age GP for SB
+KRFC_mixed <-mixed_age(KRFC.esc,maxE)%>%mutate(model="KRFC_mixedAge")
+
+#hierarchical model, but extract individual age info.. somehow. 
+KRFC_hier <-fitGP(data = KRFC.esc, yd = "value", pop="age_class",scaling = "local", E=maxE, tau=1, predictmethod = "loo")
+
+#extract individual age from hierarchical model
+outsamp <-bind_cols(KRFC_hier$outsampfitstatspop$R2pop,KRFC_hier$outsampfitstatspop$rmsepop)
+names(outsamp) <-c("OOS_R2","OOS_rmse")
+insamp <-bind_cols(KRFC_hier$insampfitstatspop$R2pop,KRFC_hier$insampfitstatspop$rmsepop)
+names(insamp) <-c("R2","rmse")
+fitstats_KRFCHier <-cbind(outsamp, insamp)
+fitstats_KRFCHier <-mutate(fitstats_KRFCHier, model="KRFC_Hier")%>%rownames_to_column("age")
+
+#extract individual age fitstats from individual age model
+fitstats_KRFCIndvAge <- mutate(KRFC_ages, across(OOS_R2:df, as.numeric))%>%rownames_to_column("age")
+
+#extract mixed age fitstats from mixed age model
+fitstats_KRFCMixed <- mutate(KRFC_mixed, across(OOS_R2:df, as.numeric))%>%rownames_to_column("age")
+```
+**Put the stats togetheR**
+```{r}
+fitstats <-bind_rows(fitstats_KRFCHier,fitstats_SBHier,fitstats_KRFCIndvAge,fitstats_SBIndvAge,fitstats_KRFCMixed,fitstats_SBMixed)
+
+KRFC_fitstats <-mutate(KRFC_fitstats, species="Chinook Salmon")
+SB_fitstats <-mutate(SB_fitstats, species="Striped Bass")
+Fits <- bind_rows(KRFC_fitstats, SB_fitstats)
+Fits2 <-filter(Fits, model %in% c("KRFC_ageStruc","KRFC_Ntotal","SB_ageStruc","SB_Ntotal"))
+
+fitstats <-bind_rows(fitstats,Fits2)
+write.csv(fitstats,"mixedage_fitstats_emp.csv")
+#write.csv(fitstats,"mixedage_fitstats_empLOG.csv")
+```
+
+**KRFC time series shortening thing**
+**time series length test** 
+```{r}
+## VARIED E CHOICE ###
+#inputs
+vars = unique(KRFC.esc$Year)
+var_pairs = combn(vars, 2) # Combinations of vars, 2 at a time
+var_pairs <-as.data.frame(t(var_pairs))%>%mutate(diff=abs(V1-V2))%>%filter(diff>=5) #every possible ts length > 5
+#outputs
+modstatsKRFC_v<-matrix(nrow=nrow(var_pairs),ncol=3)
+modstatsKRFC_v <-as.data.frame(modstatsKRFC_v)
+modstatsKRFC_v<-bind_cols(var_pairs,modstatsKRFC_v)
+names(modstatsKRFC_v) <-c("startYear","endYear","tslength","OOS_R2","OOS_rmse","maxE")
+
+for (i in 1:nrow(var_pairs)){
+   try({
+  shortKRFC <-filter(KRFC.esc, Year >= var_pairs[i,1] & Year <= var_pairs[i,2]) #filter for time segment between start and end year. 
+  maxE <-round(sqrt(abs(var_pairs[i,1]-var_pairs[i,2]))) #varying maxE
+  mod <-fitGP(data = shortKRFC, yd = "value", pop="age_class",scaling = "local", E=maxE, tau=1, predictmethod = "loo")
+  modstatsKRFC_v[i,4] <-mod$outsampfitstats[1]
+  modstatsKRFC_v[i,5] <-mod$outsampfitstats[2]
+  modstatsKRFC_v[i,6] <-maxE
+   },silent=T)
+}
+modstatsKRFC_v <-as.data.frame(modstatsKRFC_v)%>%mutate(e_choice="varied")
+
+### CONSTANT MAX E #####################
+#inputs
+vars = unique(KRFC.esc$Year)
+var_pairs = combn(vars, 2) # Combinations of vars, 2 at a time
+var_pairs <-as.data.frame(t(var_pairs))%>%mutate(diff=abs(V1-V2))%>%filter(diff>=5) #every possible ts length > 5
+#outputs
+modstatsKRFC<-matrix(nrow=nrow(var_pairs),ncol=3)
+modstatsKRFC <-as.data.frame(modstatsKRFC)
+modstatsKRFC<-bind_cols(var_pairs,modstatsKRFC)
+names(modstatsKRFC) <-c("startYear","endYear","tslength","OOS_R2","OOS_rmse","maxE")
+
+for (i in 1:nrow(var_pairs)){
+   try({
+  shortKRFC <-filter(KRFC.esc, Year >= var_pairs[i,1] & Year <= var_pairs[i,2]) #filter for time segment between start and end year. 
+  maxE = 3
+  mod <-fitGP(data = shortKRFC, yd = "value", pop="age_class",scaling = "local", E=maxE, tau=1, predictmethod = "loo")
+  modstatsKRFC[i,4] <-mod$outsampfitstats[1]
+  modstatsKRFC[i,5] <-mod$outsampfitstats[2]
+  modstatsKRFC[i,6] <-maxE
+   },silent=T)
+}
+modstatsKRFC <-as.data.frame(modstatsKRFC)%>%mutate(e_choice="constant")
+
+2##Combine
+modstatsKRFC <-bind_rows(modstatsKRFC, modstatsKRFC_v)
+
+#now summarize by time series length and e_choice
+modstatsKRFCsum <- na.omit(modstatsKRFC) %>% group_by(tslength,e_choice)%>%summarize(avOOS_R2=mean(OOS_R2,na.rm=T), sdR2=sd(OOS_R2,na.rm=T), avOOS_rmse=mean(OOS_rmse,na.rm=T), sdrmse=sd(OOS_rmse,na.rm=T), .groups="keep")%>%mutate(species="KRFC")
+modstatsSBsum<-modstatsSBsum%>%mutate(species="SB")
+
+```
+
+**Plot the time series length test**
+```{r}
+spcols <-c("SB"="#03C0C1","KRFC"="#FA8072")
+
+#combine the species summary data
+modstats <-bind_rows(modstatsSBsum,modstatsKRFCsum)
+
+modstats%>%
+  #filter(e_choice=="constant")%>%
+  ggplot(aes(x=tslength,y=avOOS_R2,color=species,fill=species))+
+  geom_line()+
+  geom_ribbon(aes(x=tslength,y=avOOS_R2,ymin=avOOS_R2-sdR2,ymax=avOOS_R2+sdR2), alpha=0.4)+
+  geom_point()+
+  scale_color_manual(values=spcols)+
+  scale_fill_manual(values=spcols)+
+  facet_grid(e_choice~species,scales="free")+
+  #facet_wrap(~e_choice)+
+  xlab("Time series length (years)")+ylab("r-squared")+
+  theme(
+  axis.text.x = element_text(size=12),
+  axis.text.y = element_text(size=12),
+  strip.text = element_text(size=12),
+  axis.title.x=element_text(size=14,face="bold",margin=margin(t=8,unit="pt")),
+  axis.title.y=element_text(size=14,face="bold",margin=margin(r=8,unit="pt")),
+  legend.key = element_rect(fill = "transparent"),
+  legend.text= element_text(size=12),
+  legend.title=element_text(size=12),
+  strip.background =element_rect(fill="transparent"),
+  panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill = "transparent",colour = "dark grey"),
+  plot.background = element_rect(fill = NA,colour = "transparent", size=0.5),
+  panel.border = element_rect(colour="black",fill=NA, size=0.3))
+ 
+
+#ggsave("emp_tslengthtest_fixed.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#dev.off() 
+```
+
+
+
+**Plot KRFC and SB fitstats together (old version)**
+The new version of this will be in the simulationDataVis document. 
+```{r}
+
+#image
+library(ggimage)
+Fits <-mutate(Fits, image=ifelse(species=="Striped Bass","sbpic.png","chinookpic.png"))
+
+
+
+#plot the OOSr2 as an image for powerpoint. 
+Fits%>%
+  #filter(model != "SB_ages" & model != "KRFC_ages")%>% # get rid of the ages fits, you can turn this off. 
+  ggplot(aes(model, OOS_R2), color=species)+
+  geom_image(aes(image=image),size=0.1)+
+  geom_label(aes(label=`age class`, fill=species),colour = "white", hjust=0, size=3,nudge_x = 0.3, check_overlap = T)+
+  ylab("out of sample r-squared")+
+  theme_classic()
+
+Fits%>%
+  #filter(model != "SB_ages" & model != "KRFC_ages")%>% # get rid of the ages fits, you can turn this off. 
+  ggplot(aes(model, OOS_R2), color=species)+
+  #geom_image(aes(image=image),size=0.1)+
+  geom_text(aes(label=`age class`, color=species), check_overlap=T)+
+  #geom_label(aes(label=`age class`, fill=species),colour = "white", check_overlap = T)+
+  ylab("out of sample r-squared")+
+  theme_classic()
+```
+
+
+############################# EXTRA KRFC STUFF ####################################################################
+Is there a relationship in relative abundance to forecast skill? We are not going to worry about this right away. 
+```{r}
+totalSB <-SB %>% group_by(age_class)%>%summarize(totscaled=sum(value))
+
+totalKRFC <-esc.wide %>% mutate(across(X2:X5,scale))%>%pivot_longer(cols=2:5,names_to = "age_class")%>%na.omit()%>%group_by(age_class)%>%summarize(totscaled=sum(value))
+
+Fits <-Fits %>% dplyr::rename(age_class=`age class`)%>%full_join(totalSB, by="age_class")#%>%full_join(totalKRFC, by="age_class")
+
+Fits%>%
+  ggplot(aes(totscaled, OOS_R2))+
+  geom_point()+
+  xlim(0,0.005)+
+  theme_classic()
+```
+
+
+```{r}
+KRFC <- read.csv("KRFC.csv", header = TRUE)
+
+#escapement dataset
+KRFC.esc <-dplyr::select(KRFC, calendar.yr, age, escapement)
+esc.wide <-pivot_wider(KRFC.esc, id_cols="calendar.yr", names_from = "age", values_from = "escapement")%>%as.data.frame()
+names(esc.wide)<-c("Year","X2","X3","X4","X5")
+#create an abundance index from all age classes
+esc.Ntotal <-mutate(esc.wide, N_total=X2+X3+X4+X5,age_class="N_total")%>%dplyr::select(Year, N_total, age_class)
+#clip both to 1984-2016
+esc.wide = filter(esc.wide, Year >1983 & Year < 2017)
+esc.Ntotal = filter(esc.Ntotal, Year >1983 & Year < 2017)
+
+#river returns - WE ARE GOING WITH THIS ONE, and MANUALLY SCALING
+KRFC.riv <-dplyr::select(KRFC, calendar.yr, age, river.return)
+riv.wide <-pivot_wider(KRFC.riv, id_cols="calendar.yr", names_from = "age", values_from = "river.return")%>%as.data.frame()
+names(riv.wide)<-c("Year","X2","X3","X4","X5")
+#create an abundance index from all age classes
+riv.Ntotal <-mutate(riv.wide, N_total=X2+X3+X4+X5,age_class="N_total")%>%dplyr::select(Year, N_total, age_class)
+#clip both to 1984-2016
+riv.wide = filter(riv.wide, Year >1983 & Year < 2017)
+riv.Ntotal = filter(riv.Ntotal, Year >1983 & Year < 2017)
+
+#RIVER RETURNS WITH OCEAN EXPLOITATION RATE (manually scaled, manual blocks)
+KRFC.oc <-dplyr::select(KRFC, calendar.yr, age, river.return, ocean.ER)%>%
+  filter(calendar.yr > 1983 & calendar.yr <= 2016)
+oc.ex <-pivot_wider(KRFC.oc, id_cols = "calendar.yr", names_from = "age", values_from = "ocean.ER")%>%as.data.frame()%>%mutate(across(2:5, scale))
+oc.wide <-pivot_wider(KRFC.oc, id_cols=c("calendar.yr"), names_from = "age", values_from = "river.return")%>%as.data.frame()%>%mutate(across(2:5, scale))
+names(oc.ex)<-c("Year","X2","X3","X4","X5")
+names(oc.wide)<-c("Year","X2","X3","X4","X5")
+oc.ex.piv <-pivot_longer(oc.ex, cols=2:5, names_to = "age_class",values_to = "ocean.ER")
+oc.wide.piv <-pivot_longer(oc.wide, cols=2:5, names_to = "age_class",values_to = "river.return")
+oc.wide.piv <-full_join(oc.ex.piv,oc.wide.piv)%>%as.data.frame()
+#make lags of ocean exploitation rate and river returns (max lag is 6)
+ocer.lag <-makelags(yd=oc.wide.piv$ocean.ER, pop=oc.wide.piv$age_class,E=6,tau=1)%>%as.data.frame()
+names(ocer.lag)<-c("oc.er.t1","oc.er.t2","oc.er.t3","oc.er.t4","oc.er.t5","oc.er.t6")
+riv.lag <-makelags(yd=oc.wide.piv$river.return, pop=oc.wide.piv$age_class,E=6,tau=1)%>%as.data.frame()
+names(riv.lag)<-c("riv.t1","riv.t2","riv.t3","riv.t4","riv.t5","riv.t6")
+KRFC.lag <-bind_cols(ocer.lag,riv.lag)%>%bind_cols(oc.wide.piv)
+
+##MANUALLY SCALED RIVER RETURNS
+##river returns dataset
+KRFC.scale <-mutate(riv.wide, across(c("X2","X3","X4","X5"), scale))%>%pivot_longer(2:5,names_to = "age_class", values_to = "value")%>%as.data.frame()
+KRFCNtotal_scale <-mutate(riv.Ntotal, N_total=scale(N_total))
+
+#plot by year
+KRFC.esc%>% ggplot(aes(calendar.yr,escapement))+
+ geom_line()+ facet_wrap(~age, scales="free_y")+ 
+  #geom_line(aes(colour = factor(age)))+
+  ggtitle("escapement")+
+  theme_classic()
+
+KRFC.riv%>% ggplot(aes(calendar.yr,river.return))+
+ geom_line()+ facet_wrap(~age, scales="free_y")+ 
+  ggtitle("River returns")+
+  theme_classic()
+
+#plot Ntotal
+esc.Ntotal%>%ggplot(aes(Year, N_total))+
+  geom_line()+ggtitle("total escapement")+theme_classic()
+
+riv.Ntotal%>%ggplot(aes(Year, N_total))+
+  geom_line()+ggtitle("total river returns")+theme_classic()
+```
+
+
+**Create the lagged correlation matrix for KRFC::river returns**
+```{r}
+  sblock <-make_block(riv.wide,max_lag = 5, tau=1)
+  sblock2 <-dplyr::select(sblock, "X2(t+0)", "X3(t+1)","X4(t+2)","X5(t+3)")
+M <-cor(sblock2, use="pairwise.complete.obs")
+corrplot(M, type="upper", method="color", title="KRFC River returns 1984-2016", mar=c(0,0,2,0), addCoef.col = "white")
+```
+
+**Fit models for KRFC** using scaled data from river returns. 
+```{r}
+#construct KRFC model with manually scaled data
+maxE <-round(sqrt(2016-1984))
+#ntotal
+KRFC_NtotalARD <-fitGP(data = KRFCNtotal_scale, yd = "N_total", pop="age_class",scaling = "none", E=maxE, tau=1, predictmethod = "loo")
+#hierarchical age
+KRFCage_sc <-fitGP(data = KRFC.scale, yd = "value", pop="age_class",scaling = "none", E=maxE, tau=1, predictmethod = "loo")
+#one age at a time
+KRFC_indvAge_sc <-indv_age(KRFC.scale,"none")
+#hierarchical age with ocean exploitation
+KRFC.ocex <-fitGP(data=KRFC.lag, yd="river.return",xd=c("oc.er.t1","oc.er.t2","oc.er.t3","oc.er.t4","oc.er.t5","oc.er.t6","riv.t1","riv.t2","riv.t3","riv.t4","riv.t5","riv.t6"), pop="age_class", scaling="none", predictmethod = "loo")
+```
+
+**extract pairwise rho for all age classes KRFC**
+```{r}
+KRFC.scale$age_class <-fct_recode(as.factor(KRFC.scale$age_class), X2="2",X3="3",X4="4",X5="5")
+
+maxE <-round(sqrt(2016-1984))
+vars = colnames(riv.wide[2:5])
+var_pairs = combn(vars, 2) # Combinations of vars, 2 at a time
+rho_matrixKRFC = array(NA, dim = c(length(vars), length(vars)), dimnames = list(vars,vars)) 
+for (i in 1:ncol(var_pairs)) {
+  df = filter(KRFC.scale, age_class %in% c(var_pairs[1,i], var_pairs[2,i]))
+fitSB <-fitGP(data = df, yd = "value", pop="age_class",scaling = "none", E=maxE, tau=1, predictmethod = "loo")
+  fitSB_rho <-tail(fitSB$pars,1)
+rho_matrixKRFC[var_pairs[1,i], var_pairs[2,i]] = fitSB_rho
+}
+rho_matrixKRFC
+round(rho_matrixKRFC,4) %>% 
+  kbl()%>%kable_classic(full_width = F, html_font = "Cambria")
+
+corrplot(rho_matrixKRFC, method="color", type="upper", diag=FALSE, is.corr = TRUE, addCoef.col = "white")
+
+```
+
+
+
+**extract fitstats KRFC**
+```{r}
+#extract fitstats for KRFC
+outsamp <-bind_rows(KRFCage_sc$outsampfitstats,KRFC_NtotalARD$outsampfitstats,KRFC.ocex$outsampfitstats)
+names(outsamp) <-c("OOS_R2","OOS_rmse")
+insamp <-bind_rows(KRFCage_sc$insampfitstats,KRFC_NtotalARD$insampfitstats,KRFC.ocex$insampfitstats)
+rhos <-c(tail(KRFCage_sc$pars,1),NA,tail(KRFC.ocex$pars,1))
+fitstats <-bind_cols(outsamp,insamp,rhos)%>%as.data.frame()
+rownames(fitstats) <-c("KRFC_ageStruc","KRFC_Ntotal","KRFC_OceanExploitation")
+colnames(fitstats)[8]<-"rho"
+fitstats <-rownames_to_column(fitstats, var="model")%>%mutate(`age class`="all")%>% mutate(across(OOS_R2:df, as.numeric))
+#fitstats individual ages KRFC
+KRFC_fitstats <- mutate(KRFC_indvAge_sc, across(OOS_R2:df, as.numeric))%>%mutate(`age class`=as.character(`age class`),rho=NA)%>%mutate(model="individual ages")%>%bind_rows(fitstats)%>%
+  mutate(across(c(OOS_R2:df,rho), round,4))
+KRFC_fitstats <-KRFC_fitstats[,c(10,8,1,2,3,4,5,6,9,7)]
+#print to table. 
+KRFC_fitstats%>% 
+  kbl()%>%kable_classic(full_width = F, html_font = "Cambria")
+
+#fitstatspop
+insampr2 <-c(KRFCage_sc$insampfitstatspop$R2pop,KRFC.ocex$insampfitstatspop$R2pop)
+insamprmse <-c(KRFCage_sc$insampfitstatspop$rmsepop,KRFC.ocex$insampfitstatspop$rmsepop)
+outsampR2 <-c(KRFCage_sc$outsampfitstatspop$R2pop,KRFC.ocex$outsampfitstatspop$R2pop)
+outsamprmse<-c(KRFCage_sc$outsampfitstatspop$rmsepop,KRFC.ocex$outsampfitstatspop$rmsepop)
+fitstatspop <-rbind(insampr2,insamprmse,outsampR2,outsamprmse)
+
+fitstatspop <-t(fitstatspop)
+
+pars <- bind_rows(KRFCage_sc$pars, KRFC.ocex$pars)
+```
+
+**get conditionals**
+```{r}
+getconditionals(KRFCage_sc)
+
+```
+
+
+
+**plot models over data**
+will do this in GGPlot later. Do we want to find a way to plot over additional data somehow?
+```{r}
+#KRFCNtotal in sample total
+ggplot(KRFC_NtotalARD$insampresults,aes(x=timestep,y=predmean)) +
+  #facet_wrap(pop~., scales = "free") +
+  geom_line() + geom_ribbon(aes(ymin=predmean-predfsd,ymax=predmean+predfsd), alpha=0.4,fill="red") +
+  geom_point(aes(y=obs)) +
+  theme_classic()
+
+#KRFCNtotal out of sample total
+ggplot(KRFC_NtotalARD$outsampresults,aes(x=timestep,y=predmean)) +
+  #facet_wrap(pop~., scales = "free") +
+  geom_line() + geom_ribbon(aes(ymin=predmean-predfsd,ymax=predmean+predfsd), alpha=0.4,fill="red") +
+  geom_point(aes(y=obs)) +
+  theme_classic()
+
+#KRFCNtotal in sample OBVS V PRED
+ggplot(KRFC_NtotalARD$insampresults,aes(x=obs,y=predmean)) +
+  #facet_wrap(pop~., scales = "free") +
+  geom_point(shape=1, color="red") +
+  xlab("observed")+ylab("predicted mean")+
+  geom_abline(slope=1, intercept=0)+
+  theme_classic()
+
+#KRFCNtotal out sample OBVS V PRED
+ggplot(KRFC_NtotalARD$outsampresults,aes(x=obs,y=predmean)) +
+  #facet_wrap(pop~., scales = "free") +
+  geom_point(shape=1, color="red") +
+  xlab("observed")+ylab("predicted mean")+
+  geom_abline(slope=1, intercept=0)+
+  theme_classic()
+
+
+#KRFCage_sc in sample
+ggplot(KRFCage_sc$insampresults,aes(x=timestep,y=predmean)) +
+  facet_wrap(pop~., scales = "free") +
+  geom_line() + geom_ribbon(aes(ymin=predmean-predfsd,ymax=predmean+predfsd), alpha=0.4) +
+  geom_point(aes(y=obs)) +
+  theme_classic()
+
+#KRFCage_sc in sample OBVS V PRED
+ggplot(KRFCage_sc$insampresults,aes(x=obs,y=predmean)) +
+  facet_wrap(pop~., scales = "free") +
+  geom_point(shape=1) +
+  xlab("observed")+ylab("predicted mean")+
+  geom_abline(slope=1, intercept=0)+
+  theme_classic()
+
+#KRFCage_sc OOS sample
+ggplot(KRFCage_sc$outsampresults,aes(x=timestep,y=predmean)) +
+  facet_wrap(pop~., scales = "free") +
+  geom_line() + geom_ribbon(aes(ymin=predmean-predfsd,ymax=predmean+predfsd), alpha=0.4) +
+  geom_point(aes(y=obs)) +
+  theme_classic()
+
+#KRFCage_sc OOS sample OBVS V PRED
+ggplot(KRFCage_sc$outsampresults,aes(x=obs,y=predmean)) +
+  facet_wrap(pop~., scales = "free") +
+  geom_point(shape=1) +
+  xlab("observed")+ylab("predicted mean")+
+  geom_abline(slope=1, intercept=0)+
+  theme_classic()
+
+#KRFCage_sc ocex in sample
+ggplot(KRFC.ocex$insampresults,aes(x=timestep,y=predmean)) +
+  facet_wrap(pop~., scales = "free") +
+  geom_line() + geom_ribbon(aes(ymin=predmean-predfsd,ymax=predmean+predfsd), alpha=0.4,fill="blue") +
+  geom_point(aes(y=obs)) +
+  theme_classic()
+
+#KRFCage_sc OOS sample OBVS V PRED
+ggplot(KRFC.ocex$insampresults,aes(x=obs,y=predmean)) +
+  facet_wrap(pop~., scales = "free") +
+  geom_point(shape=1,color="blue") +
+  xlab("observed")+ylab("predicted mean")+
+  geom_abline(slope=1, intercept=0)+
+  theme_classic()
+
+#KRFCage_sc ocex OOS sample
+ggplot(KRFC.ocex$outsampresults,aes(x=timestep,y=predmean)) +
+  facet_wrap(pop~., scales = "free") +
+  geom_line() + geom_ribbon(aes(ymin=predmean-predfsd,ymax=predmean+predfsd), alpha=0.4,fill="blue") +
+  geom_point(aes(y=obs)) +
+  theme_classic()
+
+#KRFCage_sc OOS sample OBVS V PRED
+ggplot(KRFC.ocex$outsampresults,aes(x=obs,y=predmean)) +
+  facet_wrap(pop~., scales = "free") +
+  geom_point(shape=1,color="blue") +
+  xlab("observed")+ylab("predicted mean")+
+  geom_abline(slope=1, intercept=0)+
+  theme_classic()
+```
+
+
+**training and testing KRFC-Age**
+use the first 27 years to predict last 5 years. 
+```{r}
+#this isn't working, so let's try the regular way with local scaling
+Ktrain=filter(KRFC.scale, Year <= 2011)
+Ktest=filter(KRFC.scale, Year > 2011)
+Ktestage=fitGP(data = Ktrain, yd = "value", E=6, tau=1,pop="age_class",scaling="none", datanew = Ktest)
+
+#local scaling
+Ktrain=filter(KRFC.riv, calendar.yr <= 2011)
+Ktest=filter(KRFC.riv, calendar.yr > 2011)
+Ktestage=fitGP(data = Ktrain, yd = "river.return", E=6, tau=1,pop="age",scaling="local", datanew = Ktest)
+
+#plot out/in sample
+ggplot(Ktestage$outsampresults,aes(x=timestep,y=predmean)) +
+  facet_wrap(pop~., scales = "free") +
+  geom_line() + geom_ribbon(aes(ymin=predmean-predfsd,ymax=predmean+predfsd), alpha=0.4) +
+  geom_point(aes(y=obs)) +
+  theme_classic()
+
+```
+
+########################################################################################################################################################################################################
+**Scaling sensitivity test**
+Try not scaling SB, but manually scaling KRFC
+```{r}
+#construct SBAge model using ARD
+maxE <-round(sqrt(2017-1987))
+SBage_unsc <-fitGP(data = pivSB, yd = "value", pop="age_class",scaling = "none", E=maxE, tau=1, predictmethod = "loo")
+SB_NtotalARD <-fitGP(data = SB_Ntotal, yd = "N_total", pop="age_class",scaling = "none", E=maxE, tau=1, predictmethod = "loo")
+SB_ages_sc <-indv_age(pivSB,"none")
+
+#construct KRFC model with manually scaled data
+##escapement dataset
+KRFC.scale <-mutate(esc.wide, across(c("X2","X3","X4","X5"), scale))%>%pivot_longer(2:5,names_to = "age_class", values_to = "value")%>%as.data.frame()
+KRFCNtotal_scale <-mutate(esc.Ntotal, N_total=scale(N_total))
+maxE <-round(sqrt(2016-1984))
+KRFC_NtotalARD <-fitGP(data = KRFCNtotal_scale, yd = "N_total", pop="age_class",scaling = "none", E=maxE, tau=1, predictmethod = "loo")
+KRFCage_sc <-fitGP(data = KRFC.scale, yd = "value", pop="age_class",scaling = "none", E=maxE, tau=1, predictmethod = "loo")
+KRFC_indvAge_sc <-indv_age(KRFC.scale,"none")
+```
+**extract fitstats**
+```{r}
+#extract fitstats
+outsamp <-bind_rows(SBage_unsc$outsampfitstats,KRFC_NtotalARD$outsampfitstats,KRFCage_sc$outsampfitstats)
+names(outsamp) <-c("OOS_R2","OOS_rmse")
+insamp <-bind_rows(SBage_unsc$insampfitstats,KRFC_NtotalARD$insampfitstats,KRFCage_sc$insampfitstats)
+
+rhos <-c(tail(SBage_unsc$pars,1), tail(KRFC_NtotalARD$pars,1),tail(KRFCage_sc$pars,1))
+
+fitstats <-bind_cols(outsamp,insamp,rhos)%>%as.data.frame()
+rownames(fitstats) <-c("SB_ageStruc","KRFC_Ntotal","KRFC_ageStruc")
+colnames(fitstats)[8]<-"rho"
+
+round(fitstats,4) %>% 
+  kbl()%>%kable_classic(full_width = F, html_font = "Cambria")
+
+#fitstats individual ages
+SB_ages_sc <- mutate(SB_ages_sc, across(OOS_R2:df, as.numeric))%>%mutate(`age class`=as.character(`age class`))
+KRFC_indvAge_sc<- mutate(KRFC_indvAge_sc, across(OOS_R2:df, as.numeric))
+fitstats_ages <-bind_rows(SB_ages_sc,KRFC_indvAge_sc)%>%mutate(across(OOS_R2:df, round,4))
+fitstats_ages %>%mutate(across(OOS_R2:df, round,4))%>%
+  kbl()%>%kable_classic(full_width = F, html_font = "Cambria")
+```
+
+
+
+
