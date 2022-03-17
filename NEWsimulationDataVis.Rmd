@@ -118,8 +118,9 @@ nfitspiv <-pivot_longer(newfits, 2:9, names_to = "stat")%>%as.data.frame()%>%mut
   mutate(maxE=round(sqrt(as.numeric(tslength))))
 ```
 
-**Boxplot1: Figure total abundance single index to total abundance summed estimates from hierarchical models**
+**Boxplot1: Figure total abundance single index to overall estimates from hierarchical models**
 under "approach", "sumhier" is the sum total abundance of the hierarchcial models. 
+LATER we found that we do not want to compare the summed total abundance estimates to total abundance, but we want to compare overall r-squared to total abundance. 
 
 ```{r}
 ## FITSTATS BOXPLOTS ##
@@ -148,33 +149,45 @@ fig2filt%>%
 **Boxplot1: but as a facet plot**
 Boxplot of age structured model next to Ntotal model. 
 ```{r}
-simcols <-c("prey205"="#c3a770","prey1010"="#96aad0","prey520"="#a97f8f","prey425"="#0477c2", "NT_diffyears"="#a74b22")
+apocolr =c("TAindex"="#b2df8a","sumhier"="#1f78b4")
 
 
 fig2filt%>%
   arrange(tslength)%>%
-  ggplot(aes(tslength, value, fill=model))+
-  geom_boxplot(aes(fill=model), alpha=0.7)+ 
- scale_fill_manual(values = simcols)+
+  filter(tslength ==5)%>%
+  ggplot(aes(approach, value, fill=approach))+
+  geom_point(aes(y = value, color = approach), 
+              #position = position_jitter(width = 0.15), size = 1, alpha = 0.2) +
+   position = position_jitterdodge(dodge.width=3), size = 1, alpha = 0.5) +
+    geom_boxplot(width = 0.3, outlier.shape = NA, alpha = 0.8,
+                 position=position_dodge2()) +
  ylab("out of sample r-squared")+xlab("analysis")+
+  scale_fill_manual(values=apocolr)+scale_color_manual(values=apocolr)+
  facet_grid(sim~factor(tslength, levels=c('5','10','20','25',"100")), scales="free")+
  guides(fill=guide_legend(title="analysis"))+
  theme(
-  axis.text.x = element_text(angle=90),
+  axis.text.x = element_blank(),
+  axis.text.y = element_text(size=15),
+  strip.text = element_text(size=15),
   strip.background =element_rect(fill="transparent"),
+  legend.position = "none",
+  #plot.margin=unit(c(1,1,1,1),"pt"), #top right bottom left
   panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
   panel.background = element_rect(fill = "transparent",colour = "dark grey"),
-  plot.background = element_rect(fill = NA,colour = "black", size=0.5),
-  panel.border = element_rect(colour="black",fill=NA, size=0.3))
+  plot.background = element_rect(fill = NA,colour = "transparent", size=0.5),
+  panel.border = element_rect(colour="transparent",fill=NA, size=0.3))
 
-#ggsave("ntotallengths.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("panel5.png",width=5,height=10, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("panelno5.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 #dev.off()
 ```
 **Boxplot1: but one at a time**
 Boxplot of age structured model next to Ntotal model. 
 ```{r}
-mods1 <-c("NT_diffyears", "prey1010","prey205","prey425","prey520")
+mods1 <-c("prey1010","prey205","prey425","prey520")
 tslength<-c(5,10,20,25)
+
+apocolr =c("TAindex"="#b2df8a","sumhier"="#1f78b4")
 
 plotlist <-list()
 jlist <-list()
@@ -182,11 +195,11 @@ simlist <-c("I","II","III")
 for (j in 1:length(simlist)){
 for (i in 1:length(tslength)){
     fits <-filter(fig2filt, tslength==tslength[i])%>%
-    filter(sim==simlist[j])
+    filter(sim==simlist[j])%>%filter(stat %in% c("OOS_R2"))
     #filter(sim=="III")
+    #means <-fits %>% group_by(approach)%>%summarize(avr2=mean(value))
   ts <-tslength[i]
  p<- fits%>%arrange(tslength)%>%
- filter(stat %in% c("OOS_R2"))%>%
   ggplot(aes(approach, value,fill=approach))+
   #geom_boxplot(aes(fill=model),alpha=0.7,notch=TRUE, notchwidth = 0.8,width=0.5)+ 
     #geom_flat_violin(position = position_nudge(x = 0.2, y = 0), alpha = 0.8) +
@@ -195,8 +208,10 @@ for (i in 1:length(tslength)){
    position = position_jitterdodge(dodge.width=2), size = 1, alpha = 0.5) +
     geom_boxplot(width = 0.2, outlier.shape = NA, alpha = 0.8,
                  position=position_dodge2()) +
- #scale_fill_manual(values = simcols)+
-#scale_color_manual(values = simcols)+
+   geom_line(data = means,aes(x=approach, y=avr2))+
+ scale_fill_manual(values = apocolr)+
+scale_color_manual(values = apocolr)+
+   ylim(min(fits$value),max(fits$value))+
  ylab("")+xlab("")+#ggtitle(ts)+
  #guides(fill=guide_legend(title="model"))+
  guides(color=FALSE, fill=FALSE)+
@@ -207,8 +222,8 @@ for (i in 1:length(tslength)){
   axis.text.y = element_text(size=14),
   strip.text = element_text(size=14),
   strip.background =element_rect(fill="transparent"),
-  #legend.position = "none",
-  #plot.margin=unit(c(1,1,1,1),"pt"), #top right bottom left
+  legend.position = "none",
+  plot.margin=unit(c(1,1,1,1),"pt"), #top right bottom left
   panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
   panel.background = element_rect(fill = "transparent",colour = "dark grey"),
   plot.background = element_rect(fill = NA,colour = "transparent", size=0.5),
@@ -236,17 +251,19 @@ x.grob <- textGrob("",
 
 
 mainplot <-plot_grid(plotlist1,plotlist2,plotlist3, nrow = 3)
-grid.arrange(arrangeGrob(mainplot, left = y.grob, bottom = x.grob,padding = unit(0, "line")))
+grid.arrange(arrangeGrob(mainplot, left = y.grob, top = x.grob,padding = unit(0, "line")))
 
 #ggsave("cplotattempt.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 #ggsave("cplotattempt2.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 #ggsave("cplotattempt3.png", height=10, width=10, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-#ggsave("cplotattempt4.png", height=10, width=10, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("cplotattempt4.png", height=10, width=10, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 #dev.off()
 ```
+
 **Boxplot1: Tanya's version***
 My thought is to have 3 panels stacked vertically, one for each simulation, each with its own vertical axis. Horizontal axis (shared) is time series length (years). At each horizontal axis tick there are 2 boxplots (or points and error bars) of different colors side by side (you may have to map color rather than fill if some end up being small). One color is 'with age structure', the other is 'total abundance' indicated in legend. Caption will explain that the models with age structure use the number of age classes such that number of years*number of age classes = 100 data points (see main text), or something like that. Explain that the variation shown is among 100 replicate simulations.
 ```{r}
+apocolr =c("TAindex"="#b2df8a","sumhier"="#1f78b4")
 
 fig2filt%>%
   ggplot(aes(tslength, value, fill=approach))+
@@ -256,8 +273,8 @@ fig2filt%>%
    geom_boxplot(outlier.shape = NA, alpha = 0.8,
                 position=position_dodge2(padding=0.5)) + 
    #geom_violin()+
- #scale_fill_manual(values = hiercols)+
-  #scale_color_manual(values = hiercols)+
+ scale_fill_manual(values = apocolr)+
+  scale_color_manual(values = apocolr)+
  ylab("Out-of-sample r-squared")+xlab("Time series length (years)")+
  facet_wrap(~sim, scales="free",ncol=3)+
  guides(fill=guide_legend(title="Analysis"), color=guide_legend(title="Analysis"))+
@@ -277,41 +294,107 @@ fig2filt%>%
   plot.background = element_rect(fill = "white",colour = "white", size=0.5),
   panel.border = element_rect(colour="black",fill=NA, size=0.3))
 
-#ggsave("ntotallengthsTanya2.png", width=12, height=5, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("ntotallengthsTanya2.png",path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 #dev.off()
 
 
 ```
 
 
+**Boxplot1: Tanya's version but use hier instead of sum hier***
+My thought is to have 3 panels stacked vertically, one for each simulation, each with its own vertical axis. Horizontal axis (shared) is time series length (years). At each horizontal axis tick there are 2 boxplots (or points and error bars) of different colors side by side (you may have to map color rather than fill if some end up being small). One color is 'with age structure', the other is 'total abundance' indicated in legend. Caption will explain that the models with age structure use the number of age classes such that number of years*number of age classes = 100 data points (see main text), or something like that. Explain that the variation shown is among 100 replicate simulations.
+```{r}
+apocolr =c("TAindex"="#b2df8a","hier"="#1f78b4")
+
+fig4filt <-filter(nfitspiv,stat=="OOS_R2", 
+                  approach %in% c("TAindex","hier"), 
+                  model %in%c("prey205","prey1010","prey520","prey425"), 
+                  age_class %in% c("4","5","10","20","all"))%>%
+  mutate(tslength=as.factor(tslength))
+fig4filt$tslength <-fct_relevel(fig4filt$tslength,c("5","10","20","25"))
+
+
+fig4filt%>%
+  ggplot(aes(tslength, value, fill=approach))+
+  geom_point(aes(y = value, color =approach), 
+               position = position_jitterdodge(), 
+             size = 1, alpha = 0.2) +
+   geom_boxplot(outlier.shape = NA, alpha = 0.8,
+                position=position_dodge2(padding=0.5)) + 
+   #geom_violin()+
+ scale_fill_manual(values = apocolr)+
+  scale_color_manual(values = apocolr)+
+ ylab("Out-of-sample r-squared")+xlab("Time series length (years)")+
+ facet_wrap(~sim, scales="free",ncol=3)+
+ guides(fill=guide_legend(title="Analysis"), color=guide_legend(title="Analysis"))+
+ theme(
+  axis.text.x = element_text(size=12),
+  axis.text.y = element_text(size=12),
+  axis.title.x=element_text(size=12,face="bold",margin=margin(t=8,unit="pt")),
+  axis.title.y=element_text(size=12,face="bold",margin=margin(r=8,unit="pt")),
+  strip.text = element_text(size=12),
+  legend.key = element_rect(fill = "transparent"),
+  legend.text= element_text(size=12),
+  legend.title=element_text(size=12, face="bold"),
+  legend.position = "none",
+  strip.background =element_rect(fill="white"),
+  panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill = "transparent",colour = "dark grey"),
+  plot.background = element_rect(fill = "white",colour = "white", size=0.5),
+  panel.border = element_rect(colour="black",fill=NA, size=0.3))
+
+ggsave("ntotallengthsTanyaOVERALhier.png",path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#dev.off()
+
+
+```
+
+
+
+
+
+
+
+
+
+
 **Boxplot 2: 100 data points test**
 hierarchical models of 100 data points. 
 ```{r}
-fig3filt <-filter(nfitspiv,stat=="OOS_R2", approach %in% c("TAindex","hier"), model %in% c("preyNT","prey205","prey1010","prey520","prey425"))%>%
+fig3filt <-filter(nfitspiv,stat=="OOS_R2", approach %in% c("TAindex","hier"), 
+                  model %in% c("preyNT","prey205","prey1010","prey520","prey425"),
+                  age_class =="all")%>% 
   mutate(tslength=as.factor(tslength))
 fig3filt$tslength <-fct_relevel(fig3filt$tslength,c("5","10","20","25","100"))
 fig3filt$model <-fct_relevel(fig3filt$model,c("prey205","prey1010","prey520","prey425","preyNT"))
 
 fig3filt%>%
-  ggplot(aes(model, value))+
-  geom_point(aes(y = value), color="grey",
+  ggplot(aes(tslength, value))+
+  geom_point(aes(y = value), color="#1f78b4",
                position = position_jitter(width=0.2), size = 1, alpha = 0.4) +
-    geom_boxplot(width = 0.3, outlier.shape = NA, alpha = 0.8,fill="grey") +
+    geom_boxplot(width = 0.3, outlier.shape = NA, alpha = 0.8,fill="#1f78b4") +
     #geom_flat_violin(position = position_nudge(x = 0.2, y = 0), alpha = 0.8) +
- ylab("R-squared")+xlab("Model")+
+ ylab("R-squared")+
  facet_wrap(~sim, scales="free")+
  guides(fill=guide_legend(title="analysis"))+
  theme(
-  # legend.position = "none",
-  axis.text.x = element_text(angle=90),
-  strip.background =element_rect(fill="transparent"),
+  axis.text.x = element_text(size=12),
+  axis.text.y = element_text(size=12),
+  axis.title.x=element_text(size=12,face="bold",margin=margin(t=8,unit="pt")),
+  axis.title.y=element_text(size=12,face="bold",margin=margin(r=8,unit="pt")),
+  strip.text = element_text(size=12),
+  legend.key = element_rect(fill = "transparent"),
+  legend.text= element_text(size=12),
+  legend.title=element_text(size=12, face="bold"),
+  legend.position = "bottom",
+  strip.background =element_rect(fill="white"),
   panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
   panel.background = element_rect(fill = "transparent",colour = "dark grey"),
-  plot.background = element_rect(fill = NA,colour = "black", size=0.5),
+  plot.background = element_rect(fill = "white",colour = "white", size=0.5),
   panel.border = element_rect(colour="black",fill=NA, size=0.3))
 
 
-#ggsave("ntotallengthsno6.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("ntotallengthsno6.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 #dev.off()
 ```
 

@@ -85,6 +85,23 @@ ntotal_yrs <-function(df){
   ntotalstats <-bind_rows(ntotalstats)%>%as.data.frame()%>%mutate(across(OOS_R2:df, as.numeric))
 }
 
+################################ Apples to Apples###############################
+ntotal_app<-function(df){
+  newdf <-df %>% group_by(time_step)%>%summarize(NewValue=sum(value))
+  tslength <-(max(newdf$time_step)-min(newdf$time_step))-10
+  maxE=round(sqrt(tslength))
+  ages=n_distinct(df$age_class)
+  newdfLags = makelags(data=newdf, yd="NewValue", E=maxE, tau=1)
+  new_df = cbind(newdf,newdfLags)
+  new_df.train = filter(new_df, time_step <= (max(new_df$time_step)-10))
+  new_df.test = filter(new_df, time_step > (max(new_df$time_step)-10))
+  mod1 <-fitGP(data = new_df.train, yd = "NewValue", xd=colnames(newdfLags),datanew=new_df.test,
+               scaling = "global",predictmethod = "loo")
+  mod1_out<-c(mod1$outsampfitstats, mod1$insampfitstats,tslength,ages)
+  names(mod1_out)<-c("OOS_R2","OOS_rmse","R2","rmse", "ln_post", "lnL_LOO","df","tslength","age class")
+  mod1_out
+  
+}
 
 ######## count peaks function ###############
 count_peaks <-function(x){
@@ -128,35 +145,35 @@ GPLOOP <-function(plist){
   
   #############Format the data##############
   #5 AGE CLASSES, 20 YEARS
-  prey5 <-filter(plist, time_step >=300 & time_step < 330 & age_class %in% agelist[1:5])%>% as.data.frame()
+  prey5 <-filter(plist, time_step >=300 & time_step <= 330 & age_class %in% agelist[1:5])%>% as.data.frame()
   prey5Lags = makelags(data=prey5, yd="value", pop="age_class", E=round(sqrt(20)), tau=2)
   prey5 = cbind(prey5,prey5Lags)
   prey5.train = filter(prey5, time_step <= (max(prey5$time_step)-10))
   prey5.test = filter(prey5, time_step > (max(prey5$time_step)-10))
   
   #4 AGE CLASSES, 25 YEARS 
-  prey4 <-filter(plist, time_step >=300 & time_step < 335 & age_class %in% agelist[1:4])%>% as.data.frame()
+  prey4 <-filter(plist, time_step >=300 & time_step <= 335 & age_class %in% agelist[1:4])%>% as.data.frame()
   prey4Lags = makelags(data=prey4, yd="value", pop="age_class", E=round(sqrt(25)), tau=1)
   prey4 = cbind(prey4,prey4Lags)
   prey4.train = filter(prey4, time_step <= (max(prey4$time_step)-10))
   prey4.test = filter(prey4, time_step > (max(prey4$time_step)-10))
   
   # 10 AGE CLASSES, 10 YEARS ##
-  prey10 <-filter(plist, time_step >=300 & time_step < 320 & age_class %in% agelist[1:10])%>% as.data.frame()
+  prey10 <-filter(plist, time_step >=300 & time_step <= 320 & age_class %in% agelist[1:10])%>% as.data.frame()
   prey10Lags = makelags(data=prey10, yd="value", pop="age_class", E=round(sqrt(10)), tau=1)
   prey10 = cbind(prey10,prey10Lags)
   prey10.train = filter(prey10, time_step <= (max(prey10$time_step)-10))
   prey10.test = filter(prey10, time_step > (max(prey10$time_step)-10))
   
   # 20 AGE CLASSES, 5 YEARS ##
-  prey205 <- filter(plist, time_step >=300 & time_step < 315 & age_class %in% agelist[1:20])%>% as.data.frame()
+  prey205 <- filter(plist, time_step >=300 & time_step <= 315 & age_class %in% agelist[1:20])%>% as.data.frame()
   prey205Lags = makelags(data=prey205, yd="value", pop="age_class", E=round(sqrt(5)), tau=1)
   prey205 = cbind(prey205,prey205Lags)
   prey205.train = filter(prey205, time_step <= (max(prey205$time_step)-10))
   prey205.test = filter(prey205, time_step > (max(prey205$time_step)-10))
   
   # N_TOTAL GROUP***** collected from 20 age classes over 100 years.
-  preyNT <-plistNT%>%filter(time_step > 299 & time_step < 410)%>% as.data.frame()
+  preyNT <-plistNT%>%filter(time_step >= 300 & time_step <= 410)%>% as.data.frame()
   preyNTLags = makelags(data=preyNT, yd="value", E=round(sqrt(100)), tau=1)
   preyNT = cbind(preyNT,preyNTLags)
   preyNT.train = filter(preyNT, time_step <= (max(preyNT$time_step)-10))
@@ -174,9 +191,9 @@ GPLOOP <-function(plist){
   # 20ages (5,10,20,25 years)
   twentyagesyrs <-ntotal_yrs(preypivall)%>%mutate(model="20agesdiffyrs", `age class`="all", tslength=as.numeric(tslength)-10, approach="hier")
   
-  #Ntotal abundance, different years
-  preypivNT <-plistNT %>%filter(time_step > 299 & time_step < 410)
-  Ntotsyrs <-ntotal_yrs(preypivNT)%>%mutate(model="NT_diffyears", `age class`="N_total", tslength=as.numeric(tslength)-10, approach="TAindex")
+  #Ntotal abundance, different years -DISCONTINUED
+  #preypivNT <-plistNT %>%filter(time_step > 299 & time_step < 410)
+  #Ntotsyrs <-ntotal_yrs(preypivNT)%>%mutate(model="NT_diffyears", `age class`="N_total", tslength=as.numeric(tslength)-10, approach="TAindex")
   
   # 20 years of 5 age classes 
   prey520_final <-fitGP(data = prey5.train, yd = "value", xd=colnames(prey5Lags),datanew=prey5.test,pop="age_class",scaling = "local",predictmethod = "loo")
@@ -188,6 +205,9 @@ GPLOOP <-function(plist){
   prey520sumhier <-full_join(prey520_final$outsampresults, prey520_final$insampresults, by=c("timestep","pop","obs"))%>%
     mutate(newpred=exp(predmean.x), newobs=exp(obs))%>% filter(!is.na(newpred))%>%
     group_by(timestep)%>%summarise(predmean=log(sum(newpred)), Obs=log(sum(newobs)))%>%mutate(model="prey520")
+  #Ntotal abundance, different years. 
+  prey520NT <-ntotal_app(prey5[,1:3]) 
+  prey520NT <-as.data.frame(t(prey520NT))%>%mutate(approach="TAindex",model="prey520")
   
   # 25 years of 4 age classes
   prey425_final <-fitGP(data = prey4.train, yd = "value", xd=colnames(prey4Lags),datanew=prey4.test,pop="age_class",scaling = "local",predictmethod = "loo")
@@ -198,6 +218,9 @@ GPLOOP <-function(plist){
   prey425sumhier <-full_join(prey425_final$outsampresults, prey425_final$insampresults, by=c("timestep","pop","obs"))%>%
     mutate(newpred=exp(predmean.x), newobs=exp(obs))%>% filter(!is.na(newpred))%>%
     group_by(timestep)%>%summarise(predmean=log(sum(newpred)), Obs=log(sum(newobs)))%>%mutate(model="prey425")
+  #Ntotal abundance, different years. 
+  prey425NT <-ntotal_app(prey4[,1:3])
+  prey425NT <-as.data.frame(t(prey425NT))%>%mutate(approach="TAindex",model="prey425")
   
   # 10 years of 10 age classes
   prey1010_final <-fitGP(data = prey10.train, yd = "value", xd=colnames(prey10Lags),datanew=prey10.test,pop="age_class",scaling = "local",predictmethod = "loo")
@@ -208,6 +231,9 @@ GPLOOP <-function(plist){
   prey1010sumhier <-full_join(prey1010_final$outsampresults, prey1010_final$insampresults, by=c("timestep","pop","obs"))%>%
     mutate(newpred=exp(predmean.x), newobs=exp(obs))%>% filter(!is.na(newpred))%>%
     group_by(timestep)%>%summarise(predmean=log(sum(newpred)), Obs=log(sum(newobs)))%>%mutate(model="prey1010")
+  #Ntotal abundance, different years. 
+  prey1010NT <-ntotal_app(prey10[,1:3])
+  prey1010NT <-as.data.frame(t(prey1010NT))%>%mutate(approach="TAindex",model="prey1010")
   
   # 5 years of 20 age classes
   prey205_final <-fitGP(data = prey205.train, yd = "value", xd=colnames(prey205Lags),datanew=prey205.test,pop="age_class",scaling = "local",predictmethod = "loo")
@@ -218,6 +244,9 @@ GPLOOP <-function(plist){
   prey205sumhier <-full_join(prey205_final$outsampresults, prey205_final$insampresults, by=c("timestep","pop","obs"))%>%
     mutate(newpred=exp(predmean.x), newobs=exp(obs))%>% filter(!is.na(newpred))%>%
     group_by(timestep)%>%summarise(predmean=log(sum(newpred)), Obs=log(sum(newobs)))%>%mutate(model="prey205")
+  #Ntotal abundance, different years. 
+  prey205NT <-ntotal_app(prey205[,1:3])
+  prey205NT <-as.data.frame(t(prey205NT))%>%mutate(approach="TAindex",model="prey205")
   
   
   #################################################################################################################################  
@@ -237,6 +266,9 @@ GPLOOP <-function(plist){
   fitsumhier <-bind_rows(prey520sumhier,prey425sumhier,prey1010sumhier,prey205sumhier)%>%
     group_by(model)%>%summarize(OOS_R2=getR2(obs=Obs,pred=predmean))%>%mutate(approach="sumhier")%>%as.data.frame
   
+  #concatonate apples to apples results
+  Ntotsyrs <-bind_rows(prey205NT,prey1010NT,prey520NT,prey425NT)%>%mutate(`age class`=as.character(`age class`))
+
   #fitstats_agg
   ###### for now, we are saying it's OOS_R2, but it's really in sample R2
   fitagg <-data.frame(matrix(ncol=3, nrow=4))
