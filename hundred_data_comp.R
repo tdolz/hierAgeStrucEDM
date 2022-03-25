@@ -121,8 +121,9 @@ GP100 <-function(plist){
   mutate(newpred=exp(predmean.x), newobs=exp(obs))%>% filter(!is.na(newpred))%>%
   group_by(timestep)%>%summarise(predmean=log(sum(newpred)), Obs=log(sum(newobs)))%>%mutate(model="prey425")
  #Ntotal abundance, different years. 
- prey425NT <-ntotal_app(prey4[,1:3])
- prey425NT <-as.data.frame(t(prey425NT))%>%mutate(approach="TAindex",model="prey425")
+ prey425NTog <-ntotal_app(prey4[,1:3]) 
+ prey425NT <-as.data.frame(t(prey425NTog[[1]]))%>%mutate(approach="TAindex",model="prey425")
+ prey425NTphis <-as.data.frame(t(prey425NTog[[2]]))%>%mutate(approach="TAindex",model="prey425")
  
  # 10 years of 10 age classes
  prey1010_final <-fitGP(data = prey10.train, yd = "value", xd=colnames(prey10Lags),datanew=prey10.test,pop="age_class",scaling = "local",predictmethod = "loo")
@@ -134,8 +135,9 @@ GP100 <-function(plist){
   mutate(newpred=exp(predmean.x), newobs=exp(obs))%>% filter(!is.na(newpred))%>%
   group_by(timestep)%>%summarise(predmean=log(sum(newpred)), Obs=log(sum(newobs)))%>%mutate(model="prey1010")
  #Ntotal abundance, different years. 
- prey1010NT <-ntotal_app(prey10[,1:3])
- prey1010NT <-as.data.frame(t(prey1010NT))%>%mutate(approach="TAindex",model="prey1010")
+ prey1010NTog <-ntotal_app(prey10[,1:3]) 
+ prey1010NT <-as.data.frame(t(prey1010NTog[[1]]))%>%mutate(approach="TAindex",model="prey1010")
+ prey1010NTphis <-as.data.frame(t(prey1010NTog[[2]]))%>%mutate(approach="TAindex",model="prey1010")
  
  # 5 years of 20 age classes
  prey205_final <-fitGP(data = prey205.train, yd = "value", xd=colnames(prey205Lags),datanew=prey205.test,pop="age_class",scaling = "local",predictmethod = "loo")
@@ -147,8 +149,9 @@ GP100 <-function(plist){
   mutate(newpred=exp(predmean.x), newobs=exp(obs))%>% filter(!is.na(newpred))%>%
   group_by(timestep)%>%summarise(predmean=log(sum(newpred)), Obs=log(sum(newobs)))%>%mutate(model="prey205")
  #Ntotal abundance, different years. 
- prey205NT <-ntotal_app(prey205[,1:3])
- prey205NT <-as.data.frame(t(prey205NT))%>%mutate(approach="TAindex",model="prey205")
+ prey205NTog <-ntotal_app(prey205[,1:3]) 
+ prey205NT <-as.data.frame(t(prey205NTog[[1]]))%>%mutate(approach="TAindex",model="prey205")
+ prey205NTphis <-as.data.frame(t(prey205NTog[[2]]))%>%mutate(approach="TAindex",model="prey205")
  
  
  #################################################################################################################################  
@@ -176,9 +179,19 @@ GP100 <-function(plist){
  
  pars <-bind_rows(prey205_final$pars,prey1010_final$pars,prey520_final$pars,prey425_final$pars)%>%as.data.frame()
  rownames(pars) <-c("5yrs20ages","10yrs10ages","20yrs5ages","25yrs4ages")
+ pars$model <-c("prey205","prey1010","prey520","prey425")
  pars$tslength <-c(5,10,20,25)
  pars$approach <-c("hier","hier","hier","hier")
  pars <-mutate(pars, maxE=round(sqrt(tslength)))
+ pars <-rownames_to_column(pars)
+ 
+ phis <-bind_rows(prey205NTphis, prey1010NTphis, prey520NTphis, prey425NTphis)
+ rownames(phis) <-c("5yrs20ages","10yrs10ages","20yrs5ages","25yrs4ages")
+ phis$tslength <-c(5,10,20,25)
+ phis <-mutate(phis, maxE=round(sqrt(tslength)), approach="TAindex")
+ phis <-rownames_to_column(phis)
+ 
+ pars <-bind_rows(pars, phis)
  
  #outputs
  gplout <-list(pars,fitstats,fitstats_ages,fitsumhier)
