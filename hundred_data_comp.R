@@ -27,10 +27,10 @@ preylist1 <-read.csv("Simulation1_data.csv", header=T,row.names=NULL)%>%dplyr::s
   pivot_longer(3:22, names_to = "age_class")%>%as.data.frame()
 preylist1 <- preylist1 %>% split(f=preylist1$index)%>%lapply(function(x) x[!names(x) %in% c("index")])
 preylist2 <-read.csv("Simulation2_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
-  pivot_longer(3:23, names_to = "age_class")%>%as.data.frame()%>%split(f=preylist2$index)
+  pivot_longer(3:23, names_to = "age_class")%>%as.data.frame()
 preylist2 <- preylist2 %>% split(f=preylist2$index)%>%lapply(function(x) x[!names(x) %in% c("index")])
 preylist3 <-read.csv("Simulation3_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
-  pivot_longer(3:22, names_to = "age_class")%>%as.data.frame()%>%split(f=preylist3$index)
+  pivot_longer(3:22, names_to = "age_class")%>%as.data.frame()
 preylist3 <- preylist3 %>% split(f=preylist3$index)%>%lapply(function(x) x[!names(x) %in% c("index")])
 
 
@@ -244,6 +244,14 @@ newfits
 #simulation data was created in "make_simulation_data.R"
 
 ############# Simulation 1: Apply GP Loop and corral output #####################
+
+### TESTS
+## test the GP function
+shortlist <-preylist1[1:2]
+numCores = detectCores()
+system.time(foo <-mclapply(shortlist, GP100, mc.cores=numCores))
+### test the extract function
+process.test <-PROCESS100(foo)
 
 ######## Apply the GP100 function #########
 ## this takes a while, so we apply it in parallel.
