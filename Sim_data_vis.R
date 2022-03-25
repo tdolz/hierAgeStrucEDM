@@ -28,7 +28,8 @@ phi_Sim3 <-read.csv("Sim3Phis_100data.csv", header=T)%>%mutate(sim="III")
 
 #create giant dataframe from all simulations
 phis <-bind_rows(phi_Sim1, phi_Sim2, phi_Sim3)%>%dplyr::select(-X)
-pivphi <-pivot_longer(phis, 2:11, names_to = "model")%>%as.data.frame()
+phis <-phis[,c(1,2,3,7,8,9,4,5,6,10,12,13,11)]
+pivphi <-pivot_longer(phis, 2:6, names_to = "model")%>%as.data.frame()
 
 #create pivot version where it's the mean only. 
 pivphimean <-pivphi %>% group_by(rowname,model, sim)%>% summarize(phimean=mean(value),phisd=sd(value),.groups="drop")
