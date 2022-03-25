@@ -96,10 +96,11 @@ ntotal_app<-function(df){
  new_df.test = filter(new_df, time_step > (max(new_df$time_step)-10))
  mod1 <-fitGP(data = new_df.train, yd = "value", xd=colnames(newdfLags),datanew=new_df.test,
               scaling = "local",predictmethod = "loo")
+ phis <-mod1$pars[substr(names(mod1$pars),1,3)=="phi"]
  mod1_out<-c(mod1$outsampfitstats, mod1$insampfitstats,tslength,ages)
  names(mod1_out)<-c("OOS_R2","OOS_rmse","R2","rmse", "ln_post", "lnL_LOO","df","tslength","age class")
+ mod1_out <-list(mod1_out,phis)
  mod1_out
- 
 }
 
 ########################################### count peaks function ###############

@@ -107,8 +107,9 @@ GP100 <-function(plist){
   mutate(newpred=exp(predmean.x), newobs=exp(obs))%>% filter(!is.na(newpred))%>%
   group_by(timestep)%>%summarise(predmean=log(sum(newpred)), Obs=log(sum(newobs)))%>%mutate(model="prey520")
  #Ntotal abundance, different years. 
- prey520NT <-ntotal_app(prey5[,1:3]) 
- prey520NT <-as.data.frame(t(prey520NT))%>%mutate(approach="TAindex",model="prey520")
+ prey520NTog <-ntotal_app(prey5[,1:3]) 
+ prey520NT <-as.data.frame(t(prey520NTog[[1]]))%>%mutate(approach="TAindex",model="prey520")
+ prey520NTphis <-as.data.frame(t(prey520NTog[[2]]))%>%mutate(approach="TAindex",model="prey520")
  
  # 25 years of 4 age classes
  prey425_final <-fitGP(data = prey4.train, yd = "value", xd=colnames(prey4Lags),datanew=prey4.test,pop="age_class",scaling = "local",predictmethod = "loo")
@@ -163,21 +164,12 @@ GP100 <-function(plist){
  fitstats$tslength <-c(5,10,20,25)
  fitstats <- mutate(fitstats, approach="hier")
  
- #concatonate the hier results
+ #concatonate the sumhier results
  fitsumhier <-bind_rows(prey520sumhier,prey425sumhier,prey1010sumhier,prey205sumhier)%>%
   group_by(model)%>%summarize(OOS_R2=getR2(obs=Obs,pred=predmean))%>%mutate(approach="sumhier")%>%as.data.frame
  
  #concatonate apples to apples results
  Ntotsyrs <-bind_rows(prey205NT,prey1010NT,prey520NT,prey425NT)%>%mutate(`age class`=as.character(`age class`))
- 
- #fitstats_agg
- ###### for now, we are saying it's OOS_R2, but it's really in sample R2
- fitagg <-data.frame(matrix(ncol=3, nrow=4))
- fitagg[,1] <-c(prey205agg, prey1010agg,prey520agg,prey425agg)
- fitagg[,2] <-c("prey205","prey1010","prey520","prey425")
- fitagg[,3] <-c(5,10,20,25)
- names(fitagg) <-c("OOS_R2","model","tslength")
- fitagg <-mutate(fitagg, approach="aggregate")
  
  ####### fitstats from individual ages. 
  fitstats_ages <-bind_rows(prey205_ages,prey1010_ages,prey520_ages,prey425_ages)%>%mutate(tslength=100)
@@ -189,8 +181,8 @@ GP100 <-function(plist){
  pars <-mutate(pars, maxE=round(sqrt(tslength)))
  
  #outputs
- gplout <-list(pars,fitstats,fitstats_ages,fitagg,fitsumhier)
- names(gplout) <-c("pars","fitstats","fitstats_ages","fitagg","fitsumhier")
+ gplout <-list(pars,fitstats,fitstats_ages,fitsumhier)
+ names(gplout) <-c("pars","fitstats","fitstats_ages","fitsumhier")
  gplout
 }
 
