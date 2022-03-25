@@ -1,0 +1,104 @@
+# hierAgeStrucEDM
+
+List of files for Github:
+
+- dyrho_parallel.R calculates the lagged correlation and pairwise dynamic rho for each simulation. 
+    - Inputs: 
+        - predmatrix_shortosc.csv
+        - preymatrix.csv
+    - Outputs: 
+        - "laggedcorrsumstatsone.csv" - results of the analysis performed on data from simulation I
+        - "laggedcorrsumstats2XXL.csv" - results of the analysis performed on data from simulation III
+        - "laggedcorrsumstats2MED.csv" - results of the analysis performed on data from simulation III
+- mixedAgeloop.R Comparison of hierarchical, mixed age and individual age models
+    - Inputs:
+        - predmatrix_shortosc.csv
+        - preymatrix.csv
+    - Outputs: 
+        - "mixedtest302sppMED.csv"
+        - "mixedtest301spp.csv"
+        - "mixedtest302sppXXL.csv"
+- parallelCrossfit.R creates the analysis for the contour plots - tries GP for different combinations of time series and number of age classes
+        - Inputs:
+            - predmatrix_shortosc.csv
+            - preymatrix.csv
+        - Outputs:
+            - "preylists2sppXXLSHORTOSC.csv" - output from 100 runs of simulation III where params were restricted to create shorter oscillations. 
+            - "crossfits2sppXXLSHORTOSC.csv” - - results from each pairwise combination of age classes and time series for simulation III where params were restricted to create shorter oscillations. 
+            - "crossfits2sppXXLSHORTOSC_LN.csv"- results from each pairwise combination of age classes and time series for simulation III where params were restricted to create shorter oscillations, but logging transforming the data. 
+            - "preylists2sppXXL.csv" - output from 100 runs of simulation III 
+            - "crossfits2sppXXL.csv" -- results from each pairwise combination of age classes and time series for simulation III 
+            - "preylists2sppMED.csv"- output from 100 runs of simulation II
+            - "crossfits2sppMED_LN.csv" -- results from each pairwise combination of age classes and time series for simulation II, where values were log transformed. 
+            - "preylistsOneSpp.csv" - output from 100 runs of simulation I
+            - "crossfitsONESPP_LN.csv”-- results from each pairwise combination of age classes and time series for simulation I, where values were log transformed. 
+- twosppXXLShortOscloop.R - the 100 points test fit to 100 runs for all the simulations. 
+    - Inputs:
+        - predmatrix_shortosc.csv
+        - preymatrix.csv
+    - Outputs: 
+        - "preylists2sppMEDGPLOOP100.csv" - output from 100 runs of simulation II
+        - "preylistsONESPPGPLOOP100.csv" - output from 100 runs of simulation I
+        - "preylists2sppXXLSHORTOSC_GPLOOP100.csv" - - output from 100 runs of simulation III where parameters are restricted to shorten oscillations. 
+        - "TwoSppMEDPhisLN100.csv" - saving every hyper parameter value from all fits of LN transformed data from simulation II for the 100 data points analysis. 
+        - "TwoSppMEDFitstatsLN100.csv" - all fit stats (r-squared, RMSE, etc.) from the LN transformed data from simulation II for the 100 data points analysis. 
+        - "ONEsppPhisLN100.csv"- saving every hyper parameter value from all fits of LN transformed data from simulation I for the 100 data points analysis. 
+        - "OneSppFitstatsLN100.csv" - - all fit stats (r-squared, RMSE, etc.) from the LN transformed data from simulation I for the 100 data points analysis. 
+        - "TwoSppXLPhisLN100.csv" -  saving every hyper parameter value from all fits of LN transformed data from simulation III for the 100 data points analysis. 
+        - "TwoSppXLFitstatsLN100.csv" - - all fit stats (r-squared, RMSE, etc.) from the LN transformed data from simulation III for the 100 data points analysis.
+
+- NEWsimulationDataVis.Rmd - produces the graphs for most of the simulated and some of the empirical data. 
+    - Produce the Phi Plots (Supplementary Figure S2) 
+        - Output: phiplot.png
+        - Inputs: 
+            - ONEsppPhisLN100.csv
+            - TwoSppMEDPhisLN100.csv
+            - TwoSppXLPhisLN100.csv
+    - Produce the box plots for the 100 data points test, 
+        - Outputs: 
+            - "cplotattempt.png”, 
+            - "cplotattempt4.png”, 
+            - “ntotallengthsTanya.png" 
+            - “ntotallengthsTanya2.png”, 
+            - "meandynamicrho.png"
+        - Inputs: 
+            - OneSppFitstatsLN100.csv
+            - TwoSppMEDFitstatsLN100.csv
+            - TwoSppXLFitstatsLN100.csv 
+        - Produce the mixed, hierarchical, and single age comparison plots: 
+            - Outputs
+                - tinyviolins.pdf (and other versions of the same) 
+            - Inputs: 
+                - mixedage_fitstats_empLog.csv
+                - "mixedtest301spp.csv"
+                - "mixedtest302sppMED.csv"
+                - "mixedtest302sppXXL.csv"
+                - OneSppFitstatsLN100.csv
+                - TwoSppMEDFitstatsLN100.csv
+                - TwoSppXLFitstatsLN100.csv 
+        - Produce the contour plots
+            - Outputs: none because impossible to ggsave the plotly objects
+            - Inputs: 
+                - "crossfits2sppXXLSHORTOSC_LN.csv"
+                - "crossfits2sppMED_LN.csv"
+                - "crossfitsONESPP_LN.csv"
+        - Produce the preylist time series 
+            - Outputs: Supplementary Figure s1 "preyvisSim_ILN.png"
+            - Inputs:
+                - "preylists2sppXXLSHORTOSC.csv"
+                - "preylists2sppMED.csv"
+                - "preylistsOneSpp.csv"
+                - 
+- "BestEmbedFunctions.R" - is a list of functions used especially in the real data GP 
+- 
+- “RealDataGP.Rmd” - is the analysis and visualization of the empirical datasets
+    - Striped bass data 
+        - Inputs: "CTtrawlabundanceage19872017.csv"
+        - Outputs: 
+            - SBLaggedCOrr.png - lagged correlation plot
+            - "SBfitoverdataE9all.png" - plot of striped bass hierarchal model fit over data. 
+            - "r2ETSB.png" - fits over a grid of E and tau
+            - "SB_fitstatsE9.csv" - fit statistics (r-squared, rmse etc). For striped bass with a max embedding dimension of 9
+    - KRFC
+        - Inputs: "KRFC.csv”, "SB_dataming.csv"
+        - Outputs: 
