@@ -6,6 +6,11 @@
 #### Then we export the data to the Sim_data_vis.R script to visualize it. 
 #### It produces Figure 2 in the manuscript 
 
+
+############## YOU NEED TO RE RUN THIS AND RE-OUTPUT THE FIGURES BECAUSE TAU WAS WRONG ON THE 520 ##################
+############## 4/2/22
+
+
 #### 3/18/2022
 
 source("analysis_functions.R")
@@ -56,7 +61,7 @@ GP100 <-function(plist){
  #############Format the data##############
  #5 AGE CLASSES, 20 YEARS
  prey5 <-filter(plist, time_step >=300 & time_step <= 330 & age_class %in% agelist[1:5])%>% as.data.frame()
- prey5Lags = makelags(data=prey5, yd="value", pop="age_class", E=round(sqrt(20)), tau=2)
+ prey5Lags = makelags(data=prey5, yd="value", pop="age_class", E=round(sqrt(20)), tau=1)
  prey5 = cbind(prey5,prey5Lags)
  prey5.train = filter(prey5, time_step <= (max(prey5$time_step)-10))
  prey5.test = filter(prey5, time_step > (max(prey5$time_step)-10))

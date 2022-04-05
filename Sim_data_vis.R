@@ -28,13 +28,13 @@ phi_Sim3 <-read.csv("Sim3Phis_100data.csv", header=T)%>%mutate(sim="III")
 
 #create giant dataframe from all simulations
 phis <-bind_rows(phi_Sim1, phi_Sim2, phi_Sim3)%>%dplyr::select(-X)
-phis <-phis[,c(1,2,3,7,8,9,4,5,6,10,12,13,11)]
+phis <-phis[,c(1,2,3,7,8,9,4,5,6,10,12,13,14,11)]
 pivphi <-pivot_longer(phis, 2:6, names_to = "model")%>%as.data.frame()
 
 #create pivot version where it's the mean only. 
-pivphimean <-pivphi %>% group_by(rowname,model, sim)%>% summarize(phimean=mean(value),phisd=sd(value),.groups="drop")
+pivphimean <-pivphi %>% group_by(rowname,model,sim)%>% summarize(phimean=mean(value),phisd=sd(value),.groups="drop")
 pivphimean[is.na(pivphimean)] <-0
-pivphimean$model <-fct_relevel(pivphimean$model,"phi10", after = 9)
+#pivphimean$model <-fct_relevel(pivphimean$model,"phi10", after = 9)
 pivphimean <-mutate(pivphimean, tslength=ifelse(rowname=="N_total",100,substr(rowname,1,2)))%>%mutate(tslength=ifelse(tslength=="5y",5,tslength))%>%mutate(maxE=round(sqrt(as.numeric(tslength))))
 
 #discretize the color scale
@@ -54,7 +54,6 @@ ggplot(pivphimean, aes(rowname,model))+
        strip.background =element_rect(fill="white"),
        panel.grid.major = element_blank(), 
        panel.grid.minor = element_blank())
-
 ggsave("phiplot.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
@@ -62,5 +61,26 @@ dev.off()
 
 
 ### Tanya request figure--- Simulation data with prediction
-### 
-### Tanya request figure 
+
+#load preylists and take only the first simulation run. 
+preylist1 <-read.csv("Simulation1_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
+        filter(index=="1")%>%
+        pivot_longer(3:22, names_to = "age_class")%>%as.data.frame()
+preylist2 <-read.csv("Simulation2_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
+        filter(index=="1")%>%
+        pivot_longer(3:23, names_to = "age_class")%>%as.data.frame()
+preylist3 <-read.csv("Simulation3_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
+        filter(index=="1")%>%
+        pivot_longer(3:22, names_to = "age_class")%>%as.data.frame()
+
+#Function to make 30 year datasets + ten year test dataset to fit GPs#
+### Remember to log transform the value ###
+p1 <-filter(preylist1, time_step >=300 & time_step <= 340)%>% as.data.frame()%>%mutate(value=log(value))
+p1Lags = makelags(data=p1, yd="value", pop="age_class", E=round(sqrt(30)), tau=1)
+p1 = cbind(p1,p1Lags)
+p1.train = filter(p1, time_step <= (max(p1$time_step)-10))
+p1.test = filter(p1, time_step > (max(p1$time_step)-10))
+
+p1gp <-fitGP(data = p1.train, yd = "value", xd=colnames(p1Lags),datanew=p1.test,pop="age_class",scaling = "local",predictmethod = "loo")
+
+
