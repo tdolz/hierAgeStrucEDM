@@ -114,6 +114,15 @@ count_peaks <-function(x){
  x
 }
 
+##################################### positive integers ###############
+####### use this to count if there are zeros, decimals, anything less than one
+### to detect population crashes
+
+lessT1 <-function(x){ #x is a vector of any length
+  v <-x < 1
+  length(v[v==T])
+}
+
 ##################################### find period function ###############
 ###### this measures the period of the oscillating simulated time series 
 ###### used in "make_simulation_data.R"
