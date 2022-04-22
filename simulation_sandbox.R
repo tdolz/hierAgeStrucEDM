@@ -3,7 +3,7 @@
 ### 4/19/2022 ##
 
 source("analysis_functions.R")
-devtools::install_github("tanyalrogers/GPEDM")
+#devtools::install_github("tanyalrogers/GPEDM")
 library(dplyr)
 library(tidyverse)
 library(purrr)
@@ -135,7 +135,7 @@ preylist.mean%>%
 ### SIMULATION I ################################################################################
 # NEW parameter values# 
 
-maxiter = 150. #try making 200 of them and deleting all the zero peak one
+maxiter = 800. #try making 200 of them and deleting all the zero peak one
 preylist<-list()
 predlist<-list()
 count0peaks <-list()
@@ -144,6 +144,8 @@ colnames(recnoise)<-c("recnoise","meanpeaks","varprey","meanPeriod","sdperiod")
 
 
 for (m in 1:maxiter){
+  
+  tryCatch({
  
  ### The simulation (scenario 5) ########
  ### RECRUITMENT OPTIONS ####
@@ -203,12 +205,12 @@ for (m in 1:maxiter){
  recnoise[m,5]<-sd(meanper$periodt)
  
  
- if(sum(countpeaks$pks==0)< 15) { #we can't get them all in there unfortunately. 
+ if(mean(meanper$periodt)<8) { #we can't get them all in there unfortunately. 
   preylist[[m]] <- prey
  }else
   preylist[[m]] <- NA
  
- 
+  }, error=function(e){})
  
 }
 
@@ -216,6 +218,8 @@ for (m in 1:maxiter){
 ####################
 ## View and save the preylist. 
 preylist <-preylist[!is.na(preylist)] #remove all NA elements
+length(preylist)
+preylist <-preylist[!sapply(preylist,is.null)] #remove all null elements
 length(preylist)
 preylist <-preylist[1:100] #make sure it's 100 units long
 
@@ -233,6 +237,18 @@ mean(recnoises$meanPeriod)
 sd(recnoises$meanPeriod)
 
 preylists <-preylist %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()
+
+#just look at the first one, not the mean
+preylists%>%pivot_longer(3:22, names_to = 'age_class')%>%
+  filter(index==1)%>%
+  filter(time_step >= 300 & time_step <=400)%>%
+  filter(time_step >= 300 & time_step <=320)%>%
+  ggplot(aes(time_step,value))+
+  #ggplot(aes(time_step,mean.value, color=age_class))+
+  geom_line()+
+  facet_wrap(~age_class,scales="free")+
+  theme_classic()
+
 
 ##visualize the data to make sure it's ok. 
 preylist.mean <-pivot_longer(preylists,3:22, names_to = 'age_class')%>%group_by(time_step,age_class)%>%summarize(mean.value=mean(value),.groups='drop')
@@ -404,7 +420,7 @@ preylist.mean%>%
 ############# SIMULATION II New parameter values ################################
 ###########################################################################
 
-maxiter = 200. #try making 200 of them and deleting all the zero peak one.s 
+maxiter = 800. #try making 200 of them and deleting all the zero peak one.s 
 preylist<-list()
 predlist<-list()
 count0peaks <-list()
@@ -413,6 +429,8 @@ colnames(recnoise)<-c("recnoise1","recnoise2","meanpeaks","varprey","meanPeriod"
 
 
 for (m in 1:maxiter){
+  
+  tryCatch({
   
   ### The simulation (scenario 5) ########
   ### RECRUITMENT OPTIONS ####
@@ -426,8 +444,8 @@ for (m in 1:maxiter){
   
   #Species 2 - Predator
   phi2 = 1/100
-  sdrec2 = .01 
-  recnoise2 = rnorm(1,0,0.2)
+  sdrec2 = 1 
+  recnoise2 = rnorm(1,0,1)
   beta2 = 0.001
   basefec2=c(0,0,0,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10)
   BM2 = 1 #basefec modifier 2 is good
@@ -532,9 +550,16 @@ for (m in 1:maxiter){
     #preylist[[m]] <- NA
   #this is not a great option. 
   
-  #no governor
-  preylist[[m]] <- prey
+  #mean period governor
+  if(mean(meanper$periodt)<9) { #we can't get them all in there unfortunately. 
+    preylist[[m]] <- prey
+  }else
+    preylist[[m]] <- NA
   
+  #no governor
+  #preylist[[m]] <- prey
+  
+  }, error=function(e){})
   
 }
 
@@ -543,6 +568,8 @@ for (m in 1:maxiter){
 ####################
 ## View and save the preylist. 
 preylist <-preylist[!is.na(preylist)] #remove all NA elements
+length(preylist)
+preylist <-preylist[!sapply(preylist,is.null)] #remove all null elements
 length(preylist)
 preylist <-preylist[1:100] #make sure it's 100 units long
 
@@ -560,6 +587,19 @@ mean(recnoises$meanPeriod)
 sd(recnoises$meanPeriod)
 
 preylists <-preylist %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()
+
+#just look at the first one, not the mean
+preylists%>%pivot_longer(3:23, names_to = 'age_class')%>%
+  filter(index==1)%>%
+  filter(time_step >= 300 & time_step <=400)%>%
+  filter(time_step >= 300 & time_step <=320)%>%
+  ggplot(aes(time_step,value))+
+  #ggplot(aes(time_step,mean.value, color=age_class))+
+  geom_line()+
+  facet_wrap(~age_class,scales="free")+
+  theme_classic()
+
+
 
 ##visualize the data to make sure it's ok. 
 preylist.mean <-pivot_longer(preylists,3:23, names_to = 'age_class')%>%group_by(time_step,age_class)%>%summarize(mean.value=mean(value),.groups='drop')
@@ -744,7 +784,7 @@ preylist.mean%>%
 ### SIMULATION III #################################
 ########## New Parameters #########################################
 
-maxiter = 150. 
+maxiter = 800. 
 preylist<-list()
 predlist<-list()
 count0peaks <-list()
@@ -753,6 +793,8 @@ colnames(recnoise)<-c("recnoise1","recnoise2","meanpeaks","varprey","meanPeriod"
 
 
 for (m in 1:maxiter){
+  
+  tryCatch({
   
   ##### RECRUITMENT OPTIONS ####
   #Species 1 - Prey
@@ -767,8 +809,8 @@ for (m in 1:maxiter){
   
   #Species 2 - Predator
   phi2 = 1/100
-  sdrec2 = .02 
-  recnoise2=rnorm(1,0,0.2)
+  sdrec2 = 1 
+  recnoise2=rnorm(1,0,1)
   qfec2 = c(0,0,0,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1) #pred consumption conversion efficiency (< 1)
   qfec2=qfec2*8 #8 is good
   CM2 = .05 #prey eat pred 0.1, 0.05 for steves pred matrix. 
@@ -824,7 +866,8 @@ for (m in 1:maxiter){
       fec2[j,i] = pop2[j,i-1]*(basefec2[j]+qfec2[j]*pred_eat_prey[j,]%*%pop1[,i-1]) #fecundity of pred
     }
     ####RECRUITMENT#####
-    ####
+ 
+       ####
     for(j in 1:Am){
       if (j == 1) {
         pop1[j,i]=sum(fec1[,i])*exp(-phi1*sum(fec1[,i]))*exp(sdrec1*recnoise1)
@@ -837,6 +880,7 @@ for (m in 1:maxiter){
       }
     }
   }
+    
   ### age specific ###
   prey <-as.data.frame(t(pop1)) %>% rownames_to_column(var="time_step") %>%
     mutate(time_step=as.numeric(time_step)); prey <-prey[-500,]
@@ -871,12 +915,14 @@ for (m in 1:maxiter){
   recnoise[m,5]<-mean(meanper$periodt)
   recnoise[m,6]<-sd(meanper$periodt)
   
-  
-  #if(mgroups > 0.1 & mpreds > 0.1 & mean(countpeaks$pks) > 1.2) {
-  if(mean(countpeaks$pks) > 1.2) {
+  #governor
+  if(mean(meanper$periodt) < 8){
     preylist[[m]] <- prey
   }else
     preylist[[m]] <- NA
+   
+  }, error=function(e){})
+     
 }
 
 ##############################################################
@@ -884,7 +930,9 @@ for (m in 1:maxiter){
 ## View and save the preylist. 
 preylist <-preylist[!is.na(preylist)] #remove all NA elements
 length(preylist)
-preylist <-preylist[1:100] #make sure it's 100 units long
+preylist <-preylist[!sapply(preylist,is.null)] #remove all null elements
+length(preylist)
+preylist <-preylist[1:100] #make sure it's 100 units long - BUT ONLY IF IT IS MORE THAN 100
 
 ## create separate dataframe of preylist and the recruitment noise parameters and save separately. 
 recnoises <-as.data.frame(recnoise)%>%rownames_to_column(var="index")
@@ -892,21 +940,34 @@ recnoises$count0peaks <-unlist(count0peaks)
 
 #how many peaks on average?
 ntotalpeaks <-recnoises %>% group_by(index)%>%summarize(avpks=mean(meanpeaks))
-mean(ntotalpeaks$avpks)
-sd(ntotalpeaks$avpks)
+mean(ntotalpeaks$avpks, na.rm=T)
+sd(ntotalpeaks$avpks, na.rm=T)
 
 #what is the period?
-mean(recnoises$meanPeriod)
-sd(recnoises$meanPeriod)
+mean(recnoises$meanPeriod, na.rm=T)
+sd(recnoises$meanPeriod, na.rm=T)
 
 preylists <-preylist %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()
+
+#just look at the first one, not the mean
+preylists%>%pivot_longer(3:22, names_to = 'age_class')%>%
+  filter(index==1)%>%
+  filter(time_step >= 300 & time_step <=400)%>%
+  filter(time_step >= 300 & time_step <=320)%>%
+  ggplot(aes(time_step,value))+
+  #ggplot(aes(time_step,mean.value, color=age_class))+
+  geom_line()+
+  facet_wrap(~age_class,scales="free")+
+  theme_classic()
 
 ##visualize the data to make sure it's ok. 
 preylist.mean <-pivot_longer(preylists,3:22, names_to = 'age_class')%>%group_by(time_step,age_class)%>%summarize(mean.value=mean(value),.groups='drop')
 
 preylist.mean%>%
   filter(time_step >= 300 & time_step <=400)%>%
+  filter(time_step >= 300 & time_step <=320)%>%
   ggplot(aes(time_step,mean.value))+
+  #ggplot(aes(time_step,mean.value, color=age_class))+
   geom_line()+
   facet_wrap(~age_class,scales="free")+
   theme_classic()
