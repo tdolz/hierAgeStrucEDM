@@ -60,27 +60,4 @@ dev.off()
 ##############################################################################################################################
 
 
-### Tanya request figure--- Simulation data with prediction
-
-#load preylists and take only the first simulation run. 
-preylist1 <-read.csv("Simulation1_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
-        filter(index=="1")%>%
-        pivot_longer(3:22, names_to = "age_class")%>%as.data.frame()
-preylist2 <-read.csv("Simulation2_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
-        filter(index=="1")%>%
-        pivot_longer(3:23, names_to = "age_class")%>%as.data.frame()
-preylist3 <-read.csv("Simulation3_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
-        filter(index=="1")%>%
-        pivot_longer(3:22, names_to = "age_class")%>%as.data.frame()
-
-#Function to make 30 year datasets + ten year test dataset to fit GPs#
-### Remember to log transform the value ###
-p1 <-filter(preylist1, time_step >=300 & time_step <= 340)%>% as.data.frame()%>%mutate(value=log(value))
-p1Lags = makelags(data=p1, yd="value", pop="age_class", E=round(sqrt(30)), tau=1)
-p1 = cbind(p1,p1Lags)
-p1.train = filter(p1, time_step <= (max(p1$time_step)-10))
-p1.test = filter(p1, time_step > (max(p1$time_step)-10))
-
-p1gp <-fitGP(data = p1.train, yd = "value", xd=colnames(p1Lags),datanew=p1.test,pop="age_class",scaling = "local",predictmethod = "loo")
-
 
