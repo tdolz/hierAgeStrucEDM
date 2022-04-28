@@ -135,7 +135,7 @@ preylist.mean%>%
 ### SIMULATION I ################################################################################
 # NEW parameter values# 
 
-maxiter = 800. #try making 200 of them and deleting all the zero peak one
+maxiter = 100. #try making 200 of them and deleting all the zero peak one
 preylist<-list()
 predlist<-list()
 count0peaks <-list()
@@ -205,7 +205,7 @@ for (m in 1:maxiter){
  recnoise[m,5]<-sd(meanper$periodt)
  
  
- if(mean(meanper$periodt)<8) { #we can't get them all in there unfortunately. 
+ if(mean(meanper$periodt)<10) { #we can't get them all in there unfortunately. 
   preylist[[m]] <- prey
  }else
   preylist[[m]] <- NA
@@ -242,7 +242,7 @@ preylists <-preylist %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data
 preylists%>%pivot_longer(3:22, names_to = 'age_class')%>%
   filter(index==1)%>%
   filter(time_step >= 300 & time_step <=400)%>%
-  filter(time_step >= 300 & time_step <=320)%>%
+  #filter(time_step >= 300 & time_step <=320)%>%
   ggplot(aes(time_step,value))+
   #ggplot(aes(time_step,mean.value, color=age_class))+
   geom_line()+
@@ -420,7 +420,7 @@ preylist.mean%>%
 ############# SIMULATION II New parameter values ################################
 ###########################################################################
 
-maxiter = 800. #try making 200 of them and deleting all the zero peak one.s 
+maxiter = 200. #try making 200 of them and deleting all the zero peak one.s 
 preylist<-list()
 predlist<-list()
 count0peaks <-list()
@@ -551,7 +551,7 @@ for (m in 1:maxiter){
   #this is not a great option. 
   
   #mean period governor
-  if(mean(meanper$periodt)<9) { #we can't get them all in there unfortunately. 
+  if(mean(meanper$periodt)<10) { #we can't get them all in there unfortunately. 
     preylist[[m]] <- prey
   }else
     preylist[[m]] <- NA
@@ -579,12 +579,12 @@ recnoises$count0peaks <-unlist(count0peaks)
 
 #how many peaks on average?
 ntotalpeaks <-recnoises %>% group_by(index)%>%summarize(avpks=mean(meanpeaks))
-mean(ntotalpeaks$avpks)
-sd(ntotalpeaks$avpks)
+mean(ntotalpeaks$avpks, na.rm=T)
+sd(ntotalpeaks$avpks, na.rm=T)
 
 #what is the period?
-mean(recnoises$meanPeriod)
-sd(recnoises$meanPeriod)
+mean(recnoises$meanPeriod, na.rm=T)
+sd(recnoises$meanPeriod, na.rm=T)
 
 preylists <-preylist %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()
 
@@ -916,7 +916,7 @@ for (m in 1:maxiter){
   recnoise[m,6]<-sd(meanper$periodt)
   
   #governor
-  if(mean(meanper$periodt) < 8){
+  if(mean(meanper$periodt) < 10){
     preylist[[m]] <- prey
   }else
     preylist[[m]] <- NA
