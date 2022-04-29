@@ -331,40 +331,64 @@ sd(recnoises$meanPeriod, na.rm=T)
 
 preylists <-preylist %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()
 
+preypiv <- preylists%>%pivot_longer(3:23, names_to = 'age_class')
+
+preypiv$age_class = fct_relevel(preypiv$age_class, c("V1","V2","V3","V4","V5","V6","V7","V8",
+                                                     "V9","V10","V11","V12","V13","V14","V15","V16","V17","V18","V19","V20","V21"))
+preypiv$age_class = fct_recode(preypiv$age_class, "age 1"="V1","age 2"="V2","age 3"="V3","age 4"="V4","age 5"="V5","age 6"="V6",
+                               "age 7"="V7", "age 8"="V8","age 9"="V9","age 10"="V10","age 11"="V11","age 12"="V12","age 13"="V13",
+                               "age 14"="V14",'age 15'='V15',"age 16"='V16','age 17'= "V17",'age 18'="V18","age 19"="V19","age 20"="V20","age 21+"="V21")
+
+
+#just look at the first one, not the mean
+preypiv%>%
+  filter(index==1)%>%
+  filter(time_step >= 300 & time_step <=400)%>%
+  #filter(time_step >= 300 & time_step <=320)%>%
+  ggplot(aes(time_step,value))+
+  #ggplot(aes(time_step,mean.value, color=age_class))+
+  geom_line()+
+  facet_wrap(~age_class,scales="free")+
+  theme_classic()
+ggsave("sim2_run1.png")
+#ggsave("sim2_run1.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+dev.off()
+
 ##visualize the data to make sure it's ok. 
-preylist.mean <-pivot_longer(preylists,3:23, names_to = 'age_class')%>%group_by(time_step,age_class)%>%summarize(mean.value=mean(value),.groups='drop')
+preylist.mean <-preypiv%>%group_by(time_step,age_class)%>%summarize(mean.value=mean(value),sd.value=sd(value),.groups='drop')
 
 preylist.mean%>%
- ggplot(aes(time_step,mean.value))+
- geom_line()+
- facet_wrap(~age_class,scales="free")+
- theme_classic()
-ggsave("sim2_pre_burnin.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+  ggplot(aes(time_step,mean.value))+
+  geom_line()+
+  geom_ribbon(aes(ymin=mean.value-sd.value, ymax=mean.value+sd.value), fill="grey", alpha=0.5)+
+  facet_wrap(~age_class,scales="free")+
+  theme_classic()
+ggsave("sim2_pre_burnin.png")
+#ggsave("sim2_pre_burnin.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
 preylist.mean%>%
- filter(time_step > 300)%>%
- ggplot(aes(time_step,mean.value))+
- geom_line()+
- facet_wrap(~age_class,scales="free")+
- theme_classic()
-ggsave("sim2_post_burnin.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+  filter(time_step >= 300 & time_step <= 400)%>%
+  ggplot(aes(time_step,mean.value))+
+  geom_line()+
+  geom_ribbon(aes(ymin=mean.value-sd.value, ymax=mean.value+sd.value), fill="grey", alpha=0.5)+
+  facet_wrap(~age_class,scales="free")+
+  theme_classic()
+ggsave("sim2_post_burnin.png")
+#ggsave("sim2_post_burnin.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
 
 preylists <-preylists %>%
- filter(time_step > 299)
+  filter(time_step > 299)
 
 write.csv(preylists,"Simulation2_data.csv")
 write.csv(recnoises,"sim2_info.csv")
 
-
-
-
 ################################ Simulation III ##################################################
 #### formerly known as TWO SPP XXL SHORT OSC PREYLISTS
 
-maxiter = 150. 
+maxiter = 1000. 
 preylist<-list()
 predlist<-list()
 count0peaks <-list()
@@ -373,136 +397,144 @@ colnames(recnoise)<-c("recnoise1","recnoise2","meanpeaks","varprey","meanPeriod"
 
 
 for (m in 1:maxiter){
- 
- ##### RECRUITMENT OPTIONS ####
- #Species 1 - Prey
- phi1 = 1/1000
- sdrec1 = .02  
- recnoise1 =rnorm(1,0,0.2)
- qfec1 = c(0,0,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1) #prey consumption conversion efficiency (< 1)
- qfec1=qfec1*8 
- CM1 = 0.01 #modifier of the pred_eat_prey matrix 0.01
- basefec1=c(0,0,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100) # prey
- BM1 = 2 #basefec modifier
- 
- #Species 2 - Predator
- phi2 = 1/100
- sdrec2 = .02 
- recnoise2=rnorm(1,0,0.2)
- qfec2 = c(0,0,0,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1) #pred consumption conversion efficiency (< 1)
- qfec2=qfec2*8 #8 is good
- CM2 = .05 #prey eat pred 0.1, 0.05 for steves pred matrix. 
- basefec2=c(0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)
- BM2 = 2 #basefec modifier 2 is good
- 
- # constants common to both species (for now)#
- t = 500 # num time steps
- N01 = 1000 #initial prey #1000 is good
- N02 = N01/10 #initial pred N0/10 is good. 
- Am = 20
- ages = seq(1,Am,1)
- nsurv=0.8^(ages-1) #both species start out with the same age structure. 
- 
- #make two population matrices
- pop1=matrix(nrow=Am, ncol=t) #matrix of 11 ages (columns) and 500 time steps (rows)
- pop2=matrix(nrow=Am, ncol=t)
- pop1[,1]=N01*nsurv #populate first time step (column) for species 1
- pop2[,1]=N02*nsurv #populate the first time step for species 2
- 
- #fecundity matrices
- fec1=matrix(nrow=Am, ncol=t) #prey
- fec2=matrix(nrow=Am, ncol=t) #predator
- #Baseline fecundity: Populate the first column (time step) of the fecundity matrix
- fec1[,1]=basefec1
- fec2[,1]=basefec2
- 
- #predators eat prey at a rate which increases with age.
- #prey never really escape predation but predation is diminished. 
- #Reverse the matrix order 
- #pred_eat_prey=read.csv("predatormatrix.csv", header=FALSE)%>%as.matrix()
- #pred_eat_prey=read.csv("stevespredatormatrix.csv", header=FALSE)%>%as.matrix()
- pred_eat_prey=read.csv("predmatrix_shortosc.csv", header=FALSE)%>%as.matrix() #the shorter oscillations. 
- colnames(pred_eat_prey)<- NULL
- #multiply by 0
- pred_eat_prey=pred_eat_prey*CM1 
- 
- #prey only eat predators as eggs (for now)
- prey_eat_pred=read.csv("preymatrix.csv", header=FALSE)%>%as.matrix()
- colnames(prey_eat_pred)<- NULL
- #multiply by 0
- prey_eat_pred=prey_eat_pred*CM2
- 
- ### TIME LOOP ####
- for (i in 1:t-1){ #columns
-  if (i == 1) { #skip the first time step (column) because it is already populated.
-   next
-  }
-  ### FECUNDITY
-  for(j in 1:Am){  #rows
-   #fecundity is the rate at which eater is eating*the thing being eaten across ages*
-   fec1[j,i] = pop1[j,i-1]*(basefec1[j]+qfec1[j]*prey_eat_pred[j,]%*%pop2[,i-1]) #fecundity of prey
-   fec2[j,i] = pop2[j,i-1]*(basefec2[j]+qfec2[j]*pred_eat_prey[j,]%*%pop1[,i-1]) #fecundity of pred
-  }
-  ####RECRUITMENT#####
-  ####
-  for(j in 1:Am){
-   if (j == 1) {
-    pop1[j,i]=sum(fec1[,i])*exp(-phi1*sum(fec1[,i]))*exp(sdrec1*recnoise1)
-    pop2[j,i]=sum(fec2[,i])*exp(-phi2*sum(fec2[,i]))*exp(sdrec2*recnoise2) 
-   }
-   #regular survival
-   else{
-    pop1[j,i]=pop1[j-1,i-1]*exp(-sum(pred_eat_prey[,j-1]*pop2[,i-1]))
-    pop2[j,i]=pop2[j-1,i-1]*exp(-sum(prey_eat_pred[,j-1]*pop1[,i-1]))
-   }
-  }
- }
- ### age specific ###
- prey <-as.data.frame(t(pop1)) %>% rownames_to_column(var="time_step") %>%
-  mutate(time_step=as.numeric(time_step)); prey <-prey[-500,]
- preypiv <-pivot_longer(prey, 2:21, names_to = "age_class")
- pred <-as.data.frame(t(pop2)) %>% rownames_to_column(var="time_step") %>%
-  mutate(time_step=as.numeric(time_step)); pred <-pred[-500,]
- predpiv <-pivot_longer(pred, 2:21, names_to = "age_class")
- 
- #outputs
- groupmeans <-preypiv %>% group_by(age_class)%>%summarize(preymeans=mean(value))
- predmeans <-predpiv %>% group_by(age_class)%>%summarize(predmeans=mean(value))
- 
- mgroups <-min(groupmeans$preymeans)
- mpreds <-min(predmeans$predmeans)
- 
- #count peaks
- countpeaks <-preypiv %>%filter(time_step > 299 & time_step < 310)%>%
-  dplyr::select(-time_step)%>% group_by(age_class)%>%summarize(pks = count_peaks(value))
- 
- #mean period
- meanper <-preypiv %>%filter(time_step > 299)%>% #period after the burn-in period
-  dplyr::select(-time_step)%>% group_by(age_class)%>%summarize(periodt=period(value))
- 
- #prey variance
- preyvar <-preypiv %>%group_by(age_class)%>%summarize(varprey=var(value))
- 
- #store recnoises and mean peaks
- recnoise[m,1]<-recnoise1
- recnoise[m,2]<-recnoise2
- recnoise[m,3]<-mean(countpeaks$pks)
- recnoise[m,4]<-mean(preyvar$varprey)
- recnoise[m,5]<-mean(meanper$periodt)
- recnoise[m,6]<-sd(meanper$periodt)
- 
- 
- #if(mgroups > 0.1 & mpreds > 0.1 & mean(countpeaks$pks) > 1.2) {
- if(mean(countpeaks$pks) > 1.2) {
-  preylist[[m]] <- prey
- }else
-  preylist[[m]] <- NA
+  
+  tryCatch({
+    
+    ##### RECRUITMENT OPTIONS ####
+    #Species 1 - Prey
+    phi1 = 1/1000
+    sdrec1 = 1  
+    recnoise1 =rnorm(1,0,1)
+    qfec1 = c(0,0,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1) #prey consumption conversion efficiency (< 1)
+    qfec1=qfec1*8 
+    CM1 = 0.01 #modifier of the pred_eat_prey matrix 0.01
+    basefec1=c(0,0,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100) # prey
+    BM1 = 2 #basefec modifier
+    
+    #Species 2 - Predator
+    phi2 = 1/100
+    sdrec2 = 1 
+    recnoise2=rnorm(1,0,1)
+    qfec2 = c(0,0,0,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1) #pred consumption conversion efficiency (< 1)
+    qfec2=qfec2*8 #8 is good
+    CM2 = .05 #prey eat pred 0.1, 0.05 for steves pred matrix. 
+    basefec2=c(0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)
+    BM2 = 2 #basefec modifier 2 is good
+    
+    # constants common to both species (for now)#
+    t = 500 # num time steps
+    N01 = 1000 #initial prey #1000 is good
+    N02 = N01/10 #initial pred N0/10 is good. 
+    Am = 20
+    ages = seq(1,Am,1)
+    nsurv=0.8^(ages-1) #both species start out with the same age structure. 
+    
+    #make two population matrices
+    pop1=matrix(nrow=Am, ncol=t) #matrix of 11 ages (columns) and 500 time steps (rows)
+    pop2=matrix(nrow=Am, ncol=t)
+    pop1[,1]=N01*nsurv #populate first time step (column) for species 1
+    pop2[,1]=N02*nsurv #populate the first time step for species 2
+    
+    #fecundity matrices
+    fec1=matrix(nrow=Am, ncol=t) #prey
+    fec2=matrix(nrow=Am, ncol=t) #predator
+    #Baseline fecundity: Populate the first column (time step) of the fecundity matrix
+    fec1[,1]=basefec1
+    fec2[,1]=basefec2
+    
+    #predators eat prey at a rate which increases with age.
+    #prey never really escape predation but predation is diminished. 
+    #Reverse the matrix order 
+    #pred_eat_prey=read.csv("predatormatrix.csv", header=FALSE)%>%as.matrix()
+    #pred_eat_prey=read.csv("stevespredatormatrix.csv", header=FALSE)%>%as.matrix()
+    pred_eat_prey=read.csv("predmatrix_shortosc.csv", header=FALSE)%>%as.matrix() #the shorter oscillations. 
+    colnames(pred_eat_prey)<- NULL
+    #multiply by 0
+    pred_eat_prey=pred_eat_prey*CM1 
+    
+    #prey only eat predators as eggs (for now)
+    prey_eat_pred=read.csv("preymatrix.csv", header=FALSE)%>%as.matrix()
+    colnames(prey_eat_pred)<- NULL
+    #multiply by 0
+    prey_eat_pred=prey_eat_pred*CM2
+    
+    ### TIME LOOP ####
+    for (i in 1:t-1){ #columns
+      if (i == 1) { #skip the first time step (column) because it is already populated.
+        next
+      }
+      ### FECUNDITY
+      for(j in 1:Am){  #rows
+        #fecundity is the rate at which eater is eating*the thing being eaten across ages*
+        fec1[j,i] = pop1[j,i-1]*(basefec1[j]+qfec1[j]*prey_eat_pred[j,]%*%pop2[,i-1]) #fecundity of prey
+        fec2[j,i] = pop2[j,i-1]*(basefec2[j]+qfec2[j]*pred_eat_prey[j,]%*%pop1[,i-1]) #fecundity of pred
+      }
+      ####RECRUITMENT#####
+      
+      ####
+      for(j in 1:Am){
+        if (j == 1) {
+          pop1[j,i]=sum(fec1[,i])*exp(-phi1*sum(fec1[,i]))*exp(sdrec1*recnoise1)
+          pop2[j,i]=sum(fec2[,i])*exp(-phi2*sum(fec2[,i]))*exp(sdrec2*recnoise2) 
+        }
+        #regular survival
+        else{
+          pop1[j,i]=pop1[j-1,i-1]*exp(-sum(pred_eat_prey[,j-1]*pop2[,i-1]))
+          pop2[j,i]=pop2[j-1,i-1]*exp(-sum(prey_eat_pred[,j-1]*pop1[,i-1]))
+        }
+      }
+    }
+    
+    ### age specific ###
+    prey <-as.data.frame(t(pop1)) %>% rownames_to_column(var="time_step") %>%
+      mutate(time_step=as.numeric(time_step)); prey <-prey[-500,]
+    preypiv <-pivot_longer(prey, 2:21, names_to = "age_class")
+    pred <-as.data.frame(t(pop2)) %>% rownames_to_column(var="time_step") %>%
+      mutate(time_step=as.numeric(time_step)); pred <-pred[-500,]
+    predpiv <-pivot_longer(pred, 2:21, names_to = "age_class")
+    
+    #outputs
+    groupmeans <-preypiv %>% group_by(age_class)%>%summarize(preymeans=mean(value))
+    predmeans <-predpiv %>% group_by(age_class)%>%summarize(predmeans=mean(value))
+    
+    mgroups <-min(groupmeans$preymeans)
+    mpreds <-min(predmeans$predmeans)
+    
+    #count peaks
+    countpeaks <-preypiv %>%filter(time_step > 299 & time_step < 310)%>%
+      dplyr::select(-time_step)%>% group_by(age_class)%>%summarize(pks = count_peaks(value))
+    
+    #mean period
+    meanper <-preypiv %>%filter(time_step > 299)%>% #period after the burn-in period
+      dplyr::select(-time_step)%>% group_by(age_class)%>%summarize(periodt=period(value))
+    
+    #prey variance
+    preyvar <-preypiv %>%group_by(age_class)%>%summarize(varprey=var(value))
+    
+    #store recnoises and mean peaks
+    recnoise[m,1]<-recnoise1
+    recnoise[m,2]<-recnoise2
+    recnoise[m,3]<-mean(countpeaks$pks)
+    recnoise[m,4]<-mean(preyvar$varprey)
+    recnoise[m,5]<-mean(meanper$periodt)
+    recnoise[m,6]<-sd(meanper$periodt)
+    
+    #governor
+    if(mean(meanper$periodt) < 10){
+      preylist[[m]] <- prey
+    }else
+      preylist[[m]] <- NA
+    
+  }, error=function(e){})
+  
 }
 
 ##############################################################
 ####################
 ## View and save the preylist. 
 preylist <-preylist[!is.na(preylist)] #remove all NA elements
+length(preylist)
+preylist <-preylist[!sapply(preylist,is.null)] #remove all null elements
 length(preylist)
 preylist <-preylist[1:100] #make sure it's 100 units long
 
@@ -512,38 +544,103 @@ recnoises$count0peaks <-unlist(count0peaks)
 
 #how many peaks on average?
 ntotalpeaks <-recnoises %>% group_by(index)%>%summarize(avpks=mean(meanpeaks))
-mean(ntotalpeaks$avpks)
-sd(ntotalpeaks$avpks)
+mean(ntotalpeaks$avpks, na.rm=T)
+sd(ntotalpeaks$avpks, na.rm=T)
 
 #what is the period?
-mean(recnoises$meanPeriod)
-sd(recnoises$meanPeriod)
+mean(recnoises$meanPeriod, na.rm=T)
+sd(recnoises$meanPeriod, na.rm=T)
 
 preylists <-preylist %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()
 
+preypiv <- preylists%>%pivot_longer(3:22, names_to = 'age_class')
+
+preypiv$age_class = fct_relevel(preypiv$age_class, c("V1","V2","V3","V4","V5","V6","V7","V8",
+                                                     "V9","V10","V11","V12","V13","V14","V15","V16","V17","V18","V19","V20"))
+preypiv$age_class = fct_recode(preypiv$age_class, "age 1"="V1","age 2"="V2","age 3"="V3","age 4"="V4","age 5"="V5","age 6"="V6",
+                               "age 7"="V7", "age 8"="V8","age 9"="V9","age 10"="V10","age 11"="V11","age 12"="V12","age 13"="V13",
+                               "age 14"="V14",'age 15'='V15',"age 16"='V16','age 17'= "V17",'age 18'="V18","age 19"="V19","age 20"="V20")
+
+
+#just look at the first one, not the mean
+preypiv%>%
+  filter(index==1)%>%
+  filter(time_step >= 300 & time_step <=400)%>%
+  #filter(time_step >= 300 & time_step <=320)%>%
+  ggplot(aes(time_step,value))+
+  #ggplot(aes(time_step,mean.value, color=age_class))+
+  geom_line()+
+  facet_wrap(~age_class,scales="free")+
+  theme_classic()
+ggsave("sim3_run1.png")
+#ggsave("sim3_run1.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+dev.off()
+
+#stacked age classes of run 1 with colors
+preypiv%>%
+  filter(index==1)%>%
+  filter(time_step >= 300 & time_step <=400)%>%
+  #filter(time_step >= 300 & time_step <=320)%>%
+  #ggplot(aes(time_step,value))+
+  ggplot(aes(time_step,value, color=age_class))+
+  geom_line()+
+  #facet_wrap(~age_class,scales="free")+
+  theme_classic()
+ggsave("sim3_run1colors.png")
+#ggsave("sim3_run1.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+dev.off()
+
+#plot each age class by the previous one for the first run to see how similar,
+#let's try age 5 vs age 6 
+preylist[[1]]%>%
+  filter(time_step >= 300 & time_step <=400)%>%
+  ggplot(aes(V5,V6))+
+  geom_line()+
+  theme_classic()
+
+#let's try age 1 vs age 2 
+preylist[[1]]%>%
+  filter(time_step >= 300 & time_step <=400)%>%
+  ggplot(aes(V1,V2))+
+  geom_line()+
+  theme_classic()
+
+#lets try a lagged version...
+preylist[[1]]%>%
+  mutate(V5.lag = lag(V5,1))%>%
+  filter(time_step >= 300 & time_step <=400)%>%
+  ggplot(aes(V6,V5.lag))+
+  geom_line()+
+  theme_classic()
+
+
 ##visualize the data to make sure it's ok. 
-preylist.mean <-pivot_longer(preylists,3:22, names_to = 'age_class')%>%group_by(time_step,age_class)%>%summarize(mean.value=mean(value),.groups='drop')
+preylist.mean <-preypiv%>%group_by(time_step,age_class)%>%summarize(mean.value=mean(value),sd.value=sd(value),.groups='drop')
 
 preylist.mean%>%
- ggplot(aes(time_step,mean.value))+
- geom_line()+
- facet_wrap(~age_class,scales="free")+
- theme_classic()
-ggsave("sim3_pre_burnin.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+  ggplot(aes(time_step,mean.value))+
+  geom_line()+
+  geom_ribbon(aes(ymin=mean.value-sd.value, ymax=mean.value+sd.value), fill="grey", alpha=0.5)+
+  facet_wrap(~age_class,scales="free")+
+  theme_classic()
+ggsave("sim3_pre_burnin.png")
+#ggsave("sim3_pre_burnin.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
 preylist.mean%>%
- filter(time_step > 300)%>%
- ggplot(aes(time_step,mean.value))+
- geom_line()+
- facet_wrap(~age_class,scales="free")+
- theme_classic()
-ggsave("sim3_post_burnin.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+  filter(time_step >= 300 & time_step <= 400)%>%
+  ggplot(aes(time_step,mean.value))+
+  geom_line()+
+  geom_ribbon(aes(ymin=mean.value-sd.value, ymax=mean.value+sd.value), fill="grey", alpha=0.5)+
+  facet_wrap(~age_class,scales="free")+
+  theme_classic()
+ggsave("sim3_post_burnin.png")
+#ggsave("sim3_post_burnin.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
 
 preylists <-preylists %>%
- filter(time_step > 299)
+  filter(time_step > 299)
 
 write.csv(preylists,"Simulation3_data.csv")
 write.csv(recnoises,"sim3_info.csv")

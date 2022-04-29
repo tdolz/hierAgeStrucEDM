@@ -784,7 +784,7 @@ preylist.mean%>%
 ### SIMULATION III #################################
 ########## New Parameters #########################################
 
-maxiter = 800. 
+maxiter = 1000. 
 preylist<-list()
 predlist<-list()
 count0peaks <-list()
