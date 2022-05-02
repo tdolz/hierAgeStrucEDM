@@ -1,0 +1,146 @@
+---
+title: "comparison of simulations"
+author: "tara dolan"
+date: "5/2/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This document was created to compare the "old way" of doing the simulations - prior to April 2022 - and the "new way" post April 2022. 
+
+**install packages**
+```{r}
+source("analysis_functions.R")
+#devtools::install_github("tanyalrogers/GPEDM")
+library(dplyr)
+library(tidyverse)
+library(purrr)
+library(ggplot2)
+library(rEDM)
+library(GPEDM)
+library(Metrics)
+library(corrplot)
+library(pracma)
+library(parallel)
+```
+
+**Simulation I- Old way**
+the recruitment noise is very low. sdrec parameter = 0.1, recnoise is a random draw from a normal dist with an sd =0.2. Not much variation between runs. 
+```{r}
+set.seed(4649)
+# original parameter values# 
+
+maxiter = 500.
+preylist<-list()
+predlist<-list()
+count0peaks <-list()
+recnoise <-matrix(nrow=maxiter, ncol=5)
+colnames(recnoise)<-c("recnoise","meanpeaks","varprey","meanPeriod","sdperiod")
+
+
+for (m in 1:maxiter){
+ 
+ ### The simulation (scenario 5) ########
+ ### RECRUITMENT OPTIONS ####
+ #ricker system param
+ r = 1/1000
+ sdrec= 0.1
+ recnoise1 =  rnorm(1,0,0.2)
+ ########
+ Am = 20 # max age
+ t = 500 # num time steps
+ ages = 1:Am
+ nsurv=0.8^(ages-1)
+ N0 = 1000
+ pop2=matrix(nrow=Am, ncol=t) #matrix of 10 ages (columns) and 500 time steps (rows)
+ pop2[,1]=N0*nsurv #populate first time step (column)
+ s = 0.8 #constant survival
+ fec =  c(0,0,0,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100) #constant fecundity after maturation at age 3.
+ 
+ for (i in 1:t-1){ #columns
+  if (i == 1) {
+   next
+  }
+  for(j in 1:Am){ #rows
+   if (j==1) {
+    E <-sum(fec*pop2[,i-1])
+    #E <-sum(pop2[,i-1])
+    pop2[j,i]=E*exp(r*(1-E))*exp(sdrec*recnoise1)
+   }
+   else{
+    pop2[j,i]=s*pop2[j-1,i-1]
+   }
+  }
+ }
+ 
+ prey <-as.data.frame(t(pop2)) %>% rownames_to_column(var="time_step") %>%
+  mutate(time_step=as.numeric(time_step)); 
+ preypiv <-pivot_longer(prey, 2:21, names_to = "age_class")
+ 
+ #measure how many peaks in a ten year time period.
+ countpeaks <-preypiv %>%filter(time_step > 299 & time_step < 310)%>%
+  dplyr::select(-time_step)%>% group_by(age_class)%>%summarize(pks = count_peaks(value))
+ count0peaks[[m]] <-sum(countpeaks$pks==0)
+ 
+ #outputs
+ groupmeans <-preypiv %>% group_by(age_class)%>%summarize(preymeans=mean(value))
+ mgroups <-min(groupmeans$preymeans)
+ preyvar <-preypiv %>%group_by(age_class)%>%summarize(varprey=var(value))
+ 
+ #mean period
+ meanper <-preypiv %>%filter(time_step > 299 & !is.na(value))%>%
+  dplyr::select(-time_step)%>% group_by(age_class)%>%summarize(periodt=period(value))
+ 
+ recnoise[m,1]<- recnoise1
+ recnoise[m,2]<-mean(countpeaks$pks)
+ recnoise[m,3]<-mean(preyvar$varprey)
+ recnoise[m,4]<-mean(meanper$periodt)
+ recnoise[m,5]<-sd(meanper$periodt)
+ 
+ 
+ if(sum(countpeaks$pks==0)< 15) { #we can't get them all in there unfortunately. 
+  preylist[[m]] <- prey
+ }else
+  preylist[[m]] <- NA
+ 
+ 
+ 
+}
+
+preylist <-preylist[!is.na(preylist)] #remove all NA elements
+length(preylist)
+preylist <-preylist[!sapply(preylist,is.null)] #remove all null elements
+length(preylist)
+preylist <-preylist[1:100] #make sure it's 100 units long
+
+#some data formatting
+preylists <-preylist %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()
+preypiv <- preylists%>%pivot_longer(3:22, names_to = 'age_class')
+preypiv$age_class = fct_relevel(preypiv$age_class, c("V1","V2","V3","V4","V5","V6","V7","V8",                                                     "V9","V10","V11","V12","V13","V14","V15","V16","V17","V18","V19","V20"))
+preypiv$age_class = fct_recode(preypiv$age_class, "age 1"="V1","age 2"="V2","age 3"="V3","age 4"="V4","age 5"="V5","age 6"="V6", "age 7"="V7", "age 8"="V8","age 9"="V9","age 10"="V10","age 11"="V11","age 12"="V12","age 13"="V13", "age 14"="V14",'age 15'='V15',"age 16"='V16','age 17'= "V17",'age 18'="V18","age 19"="V19","age 20"="V20")
+
+```
+500 runs out of 500 were viable (did not crash)
+
+
+**Simulation I- Old version - mean period (years)**
+```{r}
+## create separate dataframe of preylist and the recruitment noise parameters and save separately. 
+recnoises <-as.data.frame(recnoise)%>%rownames_to_column(var="index")
+recnoises$count0peaks <-unlist(count0peaks)
+
+#what is the period?
+mean(recnoises$meanPeriod, na.rm=T)
+sd(recnoises$meanPeriod, na.rm=T)
+median(recnoises$meanPeriod, na.rm=T)
+```
+mean period: ~12.8 years +- 0.034 years.
+
+**Simulation I - Old version - first run view**
+```{r}
+
+
+```

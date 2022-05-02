@@ -525,6 +525,7 @@ for (m in 1:maxiter){
     }else
       preylist[[m]] <- NA
     
+    
   }, error=function(e){})
   
 }
@@ -550,6 +551,7 @@ sd(ntotalpeaks$avpks, na.rm=T)
 #what is the period?
 mean(recnoises$meanPeriod, na.rm=T)
 sd(recnoises$meanPeriod, na.rm=T)
+median(recnoises$meanPeriod, na.rm=T)
 
 preylists <-preylist %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()
 
@@ -599,17 +601,19 @@ preylist[[1]]%>%
   theme_classic()
 
 #let's try age 1 vs age 2 
-preylist[[1]]%>%
+preylist[[10]]%>%
   filter(time_step >= 300 & time_step <=400)%>%
   ggplot(aes(V1,V2))+
   geom_line()+
   theme_classic()
 
 #lets try a lagged version...
-preylist[[1]]%>%
+#preylist[[10]]%>%
+preylists%>% filter(index < 20)%>%
   mutate(V5.lag = lag(V5,1))%>%
   filter(time_step >= 300 & time_step <=400)%>%
-  ggplot(aes(V6,V5.lag))+
+ # ggplot(aes(V6,V5.lag))+
+  ggplot(aes(V6,V5.lag, color=index))+
   geom_line()+
   theme_classic()
 
