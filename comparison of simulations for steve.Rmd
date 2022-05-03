@@ -141,6 +141,18 @@ mean period: ~12.8 years +- 0.034 years.
 
 **Simulation I - Old version - first run view**
 ```{r}
+preylists <-preylist %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()
 
+##visualize the data to make sure it's ok. 
+preylist.mean <-preypiv%>%group_by(time_step,age_class)%>%summarize(mean.value=mean(value),.groups='drop')
+
+preylist.mean%>%
+ filter(time_step >= 300 & time_step <=400)%>%
+ ggplot(aes(time_step,mean.value))+
+ geom_line()+
+ #geom_point(size=0.5)+
+ facet_wrap(~age_class,scales="free")+
+  ggtitle("mean after burn in")+
+ theme_classic()
 
 ```
