@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 This document was created to compare the "old way" of doing the simulations - prior to April 2022 - and the "new way" post April 2022. 
 
 **install packages**
-```{r}
+```{r, echo=FALSE}
 source("analysis_functions.R")
 #devtools::install_github("tanyalrogers/GPEDM")
 library(dplyr)
@@ -155,4 +155,36 @@ preylist.mean%>%
   ggtitle("mean after burn in")+
  theme_classic()
 
+preypiv%>%
+  filter(index==1)%>%
+  filter(time_step >= 300 & time_step <=400)%>%
+ ggplot(aes(time_step,value))+
+ geom_line()+
+ facet_wrap(~age_class,scales="free")+
+  ggtitle("first run after burn in")+
+ theme_classic()
+
+
+#grob plot of each age by each. 
+agelist <-names(preylists)[3:22]
+for (i in 2:length(agelist)){
+  yrcls <-noquote(agelist[i])
+  prev_yrcls <-noquote(agelist[i-1])
+  
+  p <-preylists%>%
+  mutate(lag_prev_yrcls = lag(prev_yrcls,1))%>%
+  filter(time_step >= 300 & time_step <=400)%>%
+  ggplot(aes(yrcls,prev_yrcls, color=index))+
+  geom_line()+
+  xlab(yrcls)+ylab(paste(prev_yrcls, "-1"))+
+    guides(color="none")+
+  theme_classic()
+  p
+  
+}
+
 ```
+
+
+
+
