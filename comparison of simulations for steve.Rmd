@@ -25,6 +25,8 @@ library(Metrics)
 library(corrplot)
 library(pracma)
 library(parallel)
+library(grid)
+library(gridExtra)
 ```
 
 **Simulation I- Old way**
@@ -165,23 +167,46 @@ preypiv%>%
  theme_classic()
 
 
-#grob plot of each age by each. 
-agelist <-names(preylists)[3:22]
+#grob plot of each age by itself the previous year.  
+agelist <-unique(preypiv$age_class)
+plotlist <-list()
 for (i in 2:length(agelist)){
-  yrcls <-noquote(agelist[i])
-  prev_yrcls <-noquote(agelist[i-1])
   
-  p <-preylists%>%
-  mutate(lag_prev_yrcls = lag(prev_yrcls,1))%>%
-  filter(time_step >= 300 & time_step <=400)%>%
-  ggplot(aes(yrcls,prev_yrcls, color=index))+
+  df <-preypiv%>%
+  filter(time_step >= 299 & time_step <=401)%>%
+  filter(age_class==agelist[i] | age_class==agelist[i-1])%>%
+    pivot_wider(id_cols=1:2, names_from = age_class, values_from = value)
+  
+  prev_yrcls_lag=lag(df[,3],1)
+  df<-as.data.frame(cbind(df,prev_yrcls_lag))
+  names(df)<-c("index","time_step","yrcls","yrPlus1","yrlag")
+  df <-dplyr::select(df, -yrcls)%>%filter(time_step >= 300 & time_step <=400)
+  
+  p <-ggplot(df,aes(yrlag,yrPlus1, color=as.factor(index)))+
   geom_line()+
-  xlab(yrcls)+ylab(paste(prev_yrcls, "-1"))+
+  ylab(paste(agelist[i],"(t)"))+xlab(paste(agelist[i-1], "(t-1)"))+
     guides(color="none")+
   theme_classic()
-  p
-  
+ 
+  plotlist[[i]]<-p
 }
+plotlist<-plotlist[2:20]
+plotlist
+
+row1 <-plot_grid(plotlist[[1]],plotlist[[2]],plotlist[[3]],plotlist[[4]],plotlist[[5]],ncol=5)
+row2 <-plot_grid(plotlist[[6]],plotlist[[7]],plotlist[[8]],plotlist[[9]],plotlist[[10]],ncol=5)
+row3 <-plot_grid(plotlist[[11]],plotlist[[12]],plotlist[[13]],plotlist[[14]],plotlist[[15]],ncol=5)
+row4 <-plot_grid(plotlist[[16]],plotlist[[17]],plotlist[[18]],plotlist[[19]],ncol=5)
+
+y.grob <-textGrob("Year Class (t)", gp=gpar(fontface="bold",col="black",fontsize=12),rot=90)
+x.grob <-textGrob("Prev Year Class (t-1)", gp=gpar(fontface="bold",col="black",fontsize=12))
+
+mainplot <-plot_grid(row1,row2,row3,row4, nrow=4)
+grid.arrange(arrangeGrob(mainplot, left=y.grob, bottom=x.grob, padding=unit(0,"line")))
+
+
+
+
 
 ```
 
