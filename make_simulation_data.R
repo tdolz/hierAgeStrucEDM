@@ -21,7 +21,7 @@ library(parallel)
 ##################################################### Simulation I #####################################################################################
 ##################################################### ONE SPECIES ######################################################################################
 
-
+set.seed(4649)
 maxiter = 1000. #try making 200 of them and deleting all the zero peak one
 preylist<-list()
 predlist<-list()
@@ -185,7 +185,7 @@ write.csv(recnoises,"sim1_info.csv")
 
 ###############################Simulation II############################################################################
 ############################### formerly known as TWO SPECIES MED ############################################################################
-
+set.seed(4649)
 maxiter = 1000. 
 preylist<-list()
 predlist<-list()
@@ -388,6 +388,7 @@ write.csv(recnoises,"sim2_info.csv")
 ################################ Simulation III ##################################################
 #### formerly known as TWO SPP XXL SHORT OSC PREYLISTS
 
+set.seed(4649)
 maxiter = 1000. 
 preylist<-list()
 predlist<-list()
@@ -592,31 +593,6 @@ ggsave("sim3_run1colors.png")
 #ggsave("sim3_run1.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
-#plot each age class by the previous one for the first run to see how similar,
-#let's try age 5 vs age 6 
-preylist[[1]]%>%
-  filter(time_step >= 300 & time_step <=400)%>%
-  ggplot(aes(V5,V6))+
-  geom_line()+
-  theme_classic()
-
-#let's try age 1 vs age 2 
-preylist[[10]]%>%
-  filter(time_step >= 300 & time_step <=400)%>%
-  ggplot(aes(V1,V2))+
-  geom_line()+
-  theme_classic()
-
-#lets try a lagged version...
-#preylist[[10]]%>%
-preylists%>% filter(index < 20)%>%
-  mutate(V5.lag = lag(V5,1))%>%
-  filter(time_step >= 300 & time_step <=400)%>%
- # ggplot(aes(V6,V5.lag))+
-  ggplot(aes(V6,V5.lag, color=index))+
-  geom_line()+
-  theme_classic()
-
 
 ##visualize the data to make sure it's ok. 
 preylist.mean <-preypiv%>%group_by(time_step,age_class)%>%summarize(mean.value=mean(value),sd.value=sd(value),.groups='drop')
@@ -646,5 +622,7 @@ dev.off()
 preylists <-preylists %>%
   filter(time_step > 299)
 
-write.csv(preylists,"Simulation3_data.csv")
-write.csv(recnoises,"sim3_info.csv")
+write.csv(preylists,"Simulation3_dataNEW.csv")
+#write.csv(preylists,"Simulation3_data.csv")
+write.csv(recnoises,"sim3_infoNEW.csv")
+#write.csv(recnoises,"sim3_info.csv")
