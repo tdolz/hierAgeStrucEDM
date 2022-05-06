@@ -127,7 +127,8 @@ lessT1 <-function(x){ #x is a vector of any length
 ###### this measures the period of the oscillating simulated time series 
 ###### used in "make_simulation_data.R"
 period <-function(x){
- mph <-max(x)/10 #the minimum peak height has to be 1/10 the height of the peak. 
+ #mph <-max(x)/10 #the minimum peak height has to be 1/10 the height of the peak.
+ mph <-mean(x)+(sd(x)) #the minimum peak height has to be 1 standard deviation from the mean
  x <-findpeaks(x, minpeakheight = mph)
  x <-x[,1:2]
  x <-as.data.frame(x)

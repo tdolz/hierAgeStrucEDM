@@ -59,7 +59,7 @@ p1 = cbind(p1,p1Lags)
 p1.train = filter(p1, time_step <= (max(p1$time_step)-10))
 p1.test = filter(p1, time_step > (max(p1$time_step)-10))
 
-p1gp <-fitGP(data = p1.train, y = "value", x=colnames(p1Lags),datanew=p1.test,pop="age_class",scaling = "local",predictmethod = "loo")
+p1gp <-fitGP(data = p1.train, y = "value", x=colnames(p1Lags),newdata=p1.test,pop="age_class",scaling = "local",predictmethod = "loo")
 
 
 #### extract results ####
@@ -105,12 +105,12 @@ p1.5res <-mutate(p1.5res, value=ifelse(age_class=="aggregate" & is.na(value), TA
 
 #fit a new GP to the total abundance dataset
 ta1 <-rawta%>% as.data.frame()%>%mutate(value=log(TA))
-ta1Lags = makelags(data=ta1, yd="value", pop="age_class", E=round(sqrt(30)), tau=1)
+ta1Lags = makelags(data=ta1, y="value", pop="age_class", E=round(sqrt(30)), tau=1)
 ta1 = cbind(ta1,ta1Lags)
 ta1.train = filter(ta1, time_step <= (max(ta1$time_step)-10))
 ta1.test = filter(ta1, time_step > (max(ta1$time_step)-10))
 #fit the GP
-ta1gp <-fitGP(data = ta1.train, yd = "value", xd=colnames(ta1Lags),datanew=ta1.test,pop="age_class",scaling = "local",predictmethod = "loo")
+ta1gp <-fitGP(data = ta1.train, y = "value", x=colnames(ta1Lags),newdata=ta1.test,pop="age_class",scaling = "local",predictmethod = "loo")
 #extract the results and convert out of log scale
 ta1res <-mutate(ta1gp$outsampresults, time_step=timestep+330)%>%dplyr::rename(age_class=pop)%>%
         mutate(ymin=exp(predmean)-exp(predfsd), ymax=exp(predmean)+exp(predfsd))%>%
@@ -164,12 +164,12 @@ p1.5res$age_class <-fct_relevel(p1.5res$age_class, "Age 1","Age 2","Age 3","Age 
  #Make 30 year datasets + ten year test dataset to fit GPs#
  ### Remember to log transform the value ###
  p2 <-filter(preylist2, time_step >=300 & time_step <= 340, age_class != "V21")%>% as.data.frame()%>%mutate(value=log(value))
- p2Lags = makelags(data=p2, yd="value", pop="age_class", E=round(sqrt(30)), tau=1)
+ p2Lags = makelags(data=p2, y="value", pop="age_class", E=round(sqrt(30)), tau=1)
  p2 = cbind(p2,p2Lags)
  p2.train = filter(p2, time_step <= (max(p2$time_step)-10))
  p2.test = filter(p2, time_step > (max(p2$time_step)-10))
  
- p2gp <-fitGP(data = p2.train, yd = "value", xd=colnames(p2Lags),datanew=p2.test,pop="age_class",scaling = "local",predictmethod = "loo")
+ p2gp <-fitGP(data = p2.train, y = "value", x=colnames(p2Lags),newdata=p2.test,pop="age_class",scaling = "local",predictmethod = "loo")
  
  
  #### extract results ####
@@ -199,19 +199,19 @@ p1.5res$age_class <-fct_relevel(p1.5res$age_class, "Age 1","Age 2","Age 3","Age 
  #we will have to add the raw data - note that it is unlogged at present. 
  rawta <-filter(preylist2, time_step >=300 & time_step <= 340, age_class!="V21")%>% 
          group_by(time_step)%>%summarize(TA=sum(value))%>%
-         mutate(age_class="aggregate")%>%
+         mutate(age_class="aggregate")
          #mutate(time_step=time_step +1) ### IS THIS FIXING MISALIGN OR MAKING IT WORSE?
  p2.5res <-full_join(p2res,rawta)
  p2.5res <-mutate(p2.5res, value=ifelse(age_class=="aggregate" & is.na(value), TA, value))
  
  #fit a new GP to the total abundance dataset
  ta2 <-rawta%>% as.data.frame()%>%mutate(value=log(TA))
- ta2Lags = makelags(data=ta2, yd="value", pop="age_class", E=round(sqrt(30)), tau=1)
+ ta2Lags = makelags(data=ta2, y="value", pop="age_class", E=round(sqrt(30)), tau=1)
  ta2 = cbind(ta2,ta2Lags)
  ta2.train = filter(ta2, time_step <= (max(ta2$time_step)-10))
  ta2.test = filter(ta2, time_step > (max(ta2$time_step)-10))
  #fit the GP
- ta2gp <-fitGP(data = ta2.train, yd = "value", xd=colnames(ta2Lags),datanew=ta2.test,pop="age_class",scaling = "local",predictmethod = "loo")
+ ta2gp <-fitGP(data = ta2.train, y = "value", x=colnames(ta2Lags),newdata=ta2.test,pop="age_class",scaling = "local",predictmethod = "loo")
  #extract the results and convert out of log scale
  ta2res <-mutate(ta2gp$outsampresults, time_step=timestep+330)%>%dplyr::rename(age_class=pop)%>%
          mutate(ymin=exp(predmean)-exp(predfsd), ymax=exp(predmean)+exp(predfsd))%>%
@@ -261,12 +261,12 @@ p1.5res$age_class <-fct_relevel(p1.5res$age_class, "Age 1","Age 2","Age 3","Age 
  #Make 30 year datasets + ten year test dataset to fit GPs#
  ### Remember to log transform the value ###
  p3 <-filter(preylist3, time_step >=300 & time_step <= 340)%>% as.data.frame()%>%mutate(value=log(value))
- p3Lags = makelags(data=p3, yd="value", pop="age_class", E=round(sqrt(30)), tau=1)
+ p3Lags = makelags(data=p3, y="value", pop="age_class", E=round(sqrt(30)), tau=1)
  p3 = cbind(p3,p3Lags)
  p3.train = filter(p3, time_step <= (max(p3$time_step)-10))
  p3.test = filter(p3, time_step > (max(p3$time_step)-10))
  
- p3gp <-fitGP(data = p3.train, yd = "value", xd=colnames(p3Lags),datanew=p3.test,pop="age_class",scaling = "local",predictmethod = "loo")
+ p3gp <-fitGP(data = p3.train, y = "value", x=colnames(p3Lags),newdata=p3.test,pop="age_class",scaling = "local",predictmethod = "loo")
  
  
  #### extract results ####
@@ -302,12 +302,12 @@ p1.5res$age_class <-fct_relevel(p1.5res$age_class, "Age 1","Age 2","Age 3","Age 
  
  #fit a new GP to the total abundance dataset
  ta3 <-rawta%>% as.data.frame()%>%mutate(value=log(TA))
- ta3Lags = makelags(data=ta3, yd="value", pop="age_class", E=round(sqrt(30)), tau=1)
+ ta3Lags = makelags(data=ta3, y="value", pop="age_class", E=round(sqrt(30)), tau=1)
  ta3 = cbind(ta3,ta3Lags)
  ta3.train = filter(ta3, time_step <= (max(ta3$time_step)-10))
  ta3.test = filter(ta3, time_step > (max(ta3$time_step)-10))
  #fit the GP
- ta3gp <-fitGP(data = ta3.train, yd = "value", xd=colnames(ta3Lags),datanew=ta3.test,pop="age_class",scaling = "local",predictmethod = "loo")
+ ta3gp <-fitGP(data = ta3.train, y = "value", x=colnames(ta3Lags),newdata=ta3.test,pop="age_class",scaling = "local",predictmethod = "loo")
  #extract the results and convert out of log scale
  ta3res <-mutate(ta3gp$outsampresults, time_step=timestep+330)%>%dplyr::rename(age_class=pop)%>%
          mutate(ymin=exp(predmean)-exp(predfsd), ymax=exp(predmean)+exp(predfsd))%>%

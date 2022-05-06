@@ -596,7 +596,7 @@ preypiv$age_class = fct_relevel(preypiv$age_class, c("V1","V2","V3","V4","V5","V
 preypiv$age_class = fct_recode(preypiv$age_class, "age 1"="V1","age 2"="V2","age 3"="V3","age 4"="V4","age 5"="V5","age 6"="V6", "age 7"="V7", "age 8"="V8","age 9"="V9","age 10"="V10","age 11"="V11","age 12"="V12","age 13"="V13", "age 14"="V14",'age 15'='V15',"age 16"='V16','age 17'= "V17",'age 18'="V18","age 19"="V19","age 20"="V20", "age 21"="V21")
 
 ```
-two out of 150 runs either crashed or were rejected for having the wrong period. 
+7 out of 150 runs either crashed or were rejected for having the wrong period. 
 
 
 **Simulation II- old version - mean period (years)**
@@ -610,7 +610,7 @@ mean(recnoises$meanPeriod, na.rm=T)
 sd(recnoises$meanPeriod, na.rm=T)
 median(recnoises$meanPeriod, na.rm=T)
 ```
-the mean period is 15 years and the sd on this is 0.0017 so very little variation. Honestly, if we can make the period shorter that would be better. 
+the mean period is 15 years and the sd on this is 0.0014 so very little variation. Honestly, if we can make the period shorter that would be better. 
 
 
 **Simulation II - Old version - first run view**
@@ -831,13 +831,13 @@ for (m in 1:maxiter){
 
     
     #mean period governor
-    if(mean(meanper$periodt)<10) { #we can't get them all in there unfortunately. 
-      preylist[[m]] <- prey
-    }else
-      preylist[[m]] <- NA
+    #if(mean(meanper$periodt)<10) { #we can't get them all in there unfortunately. 
+    #  preylist[[m]] <- prey
+    #}else
+    #  preylist[[m]] <- NA
     
     #no governor
-    #preylist[[m]] <- prey
+    preylist[[m]] <- prey
     
   }, error=function(e){})
   
@@ -856,7 +856,7 @@ preypiv$age_class = fct_relevel(preypiv$age_class, c("V1","V2","V3","V4","V5","V
 preypiv$age_class = fct_recode(preypiv$age_class, "age 1"="V1","age 2"="V2","age 3"="V3","age 4"="V4","age 5"="V5","age 6"="V6", "age 7"="V7", "age 8"="V8","age 9"="V9","age 10"="V10","age 11"="V11","age 12"="V12","age 13"="V13", "age 14"="V14",'age 15'='V15',"age 16"='V16','age 17'= "V17",'age 18'="V18","age 19"="V19","age 20"="V20", "age 21"="V21")
 
 ```
-out of 1000 runs only 420 didn't crash and only 116 of those had a short enough period. 
+out of 1000 runs only 438 didn't crash and only 142 of those had a short enough period. 
 
 **Simulation II- NEW version - mean period (years)**
 ```{r}
@@ -1385,10 +1385,10 @@ for (m in 1:maxiter){
     recnoise[m,6]<-sd(meanper$periodt)
     
     #governor
-    if(mean(meanper$periodt) < 10){
+    #if(mean(meanper$periodt) < 10){
       preylist[[m]] <- prey
-    }else
-      preylist[[m]] <- NA
+   # }else
+     # preylist[[m]] <- NA
     
     
   }, error=function(e){})

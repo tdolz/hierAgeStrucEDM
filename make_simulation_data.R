@@ -622,7 +622,7 @@ dev.off()
 preylists <-preylists %>%
   filter(time_step > 299)
 
-write.csv(preylists,"Simulation3_dataNEW.csv")
+#write.csv(preylists,"Simulation3_dataNEW.csv")
 #write.csv(preylists,"Simulation3_data.csv")
-write.csv(recnoises,"sim3_infoNEW.csv")
+#write.csv(recnoises,"sim3_infoNEW.csv")
 #write.csv(recnoises,"sim3_info.csv")
