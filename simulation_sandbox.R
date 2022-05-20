@@ -134,8 +134,8 @@ preylist.mean%>%
 
 ### SIMULATION I ################################################################################
 # NEW parameter values# 
-
-maxiter = 100. #try making 200 of them and deleting all the zero peak one
+set.seed(4649)
+maxiter = 1000. #try making 200 of them and deleting all the zero peak one
 preylist<-list()
 predlist<-list()
 count0peaks <-list()
@@ -205,7 +205,7 @@ for (m in 1:maxiter){
  recnoise[m,5]<-sd(meanper$periodt)
  
  
- if(mean(meanper$periodt)<10) { #we can't get them all in there unfortunately. 
+ if(mean(meanper$periodt)<12) { #we can't get them all in there unfortunately. 
   preylist[[m]] <- prey
  }else
   preylist[[m]] <- NA
@@ -229,12 +229,12 @@ recnoises$count0peaks <-unlist(count0peaks)
 
 #how many peaks on average?
 ntotalpeaks <-recnoises %>% group_by(index)%>%summarize(avpks=mean(meanpeaks))
-mean(ntotalpeaks$avpks)
-sd(ntotalpeaks$avpks)
+mean(ntotalpeaks$avpks, na.rm=T)
+sd(ntotalpeaks$avpks, na.rm=T)
 
 #what is the period?
-mean(recnoises$meanPeriod)
-sd(recnoises$meanPeriod)
+mean(recnoises$meanPeriod, na.rm=T)
+sd(recnoises$meanPeriod, na.rm=T)
 
 preylists <-preylist %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()
 

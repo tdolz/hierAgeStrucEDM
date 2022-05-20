@@ -20,7 +20,7 @@ preylist1 <-read.csv("Simulation1_data.csv", header=T,row.names=NULL)%>%dplyr::s
 preylist2 <-read.csv("Simulation2_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
  filter(index=="1")%>%
  pivot_longer(3:23, names_to = "age_class")%>%as.data.frame()%>%mutate(Simulation="II")%>%filter(age_class !="V21")
-preylist3 <-read.csv("Simulation3_dataNEW.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
+preylist3 <-read.csv("Simulation3_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
  filter(index=="1")%>%
  pivot_longer(3:22, names_to = "age_class")%>%as.data.frame()%>%mutate(Simulation="III")
 
@@ -36,6 +36,7 @@ preyall$age_class <-fct_relevel(preyall$age_class, "Age 1","Age 2","Age 3","Age 
                                 "Age 8","Age 9","Age 10","Age 11",'Age 12',"Age 13","Age 14","Age 15","Age 16","Age 17","Age 18",
                                 "Age 19","Age 20")
 
+#simulation 1 plot
 preyall %>%
         filter(time_step <=400)%>%
         filter(Simulation == "I")%>%
@@ -45,19 +46,55 @@ preyall %>%
         facet_wrap(age_class~., scales="free_y")+
         #facet_grid(age_class~Simulation, scales="free")+
         theme_classic()
-#save
-ggsave("rawsim.png",height=6, width=8,dpi=300,  path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-dev.off()
+
 
 
 ### SIM 1 ###################################################################################################################
 #Make 30 year datasets + ten year test dataset to fit GPs#
+
+#preylist1 <-preylists%>%pivot_longer(3:22, names_to = 'age_class')%>%
+      #  filter(index==1)
+
+#find the best E and tau - 
+pgrid <-as.data.frame(preylist1) %>%filter(age_class !="V21" & time_step >=300 & time_step < 330)
+pgrid <-mutate(pgrid, value=log(value))
+
+Ees <-seq(2,10,1)
+taus <-seq(1,3,1)
+var_pairs = expand.grid(Ees, taus) # Combinations of vars, 2 at a time
+ETdf <-matrix(nrow=dim(var_pairs)[1],ncol=4)
+ETdf[,1]<-var_pairs[,1]
+ETdf[,2]<-var_pairs[,2]
+r2matrix1 = array(NA, dim = c(length(Ees), length(taus)), dimnames = list(Ees,taus)) 
+rmsematrix1 = array(NA, dim = c(length(Ees), length(taus)), dimnames = list(Ees,taus)) 
+for (i in 1:nrow(var_pairs)) {
+        try({
+                fit1 <-fitGP(data = pgrid, y = "value", pop="age_class",scaling = "local", E=var_pairs[i,1], tau=var_pairs[i,2], predictmethod = "loo")
+                fit1_r2 <-fit1$outsampfitstats[[1]]
+                fit1_rmse <-fit1$outsampfitstats[[2]]
+                r2matrix1[var_pairs[i,1], var_pairs[i,2]] = fit1_r2
+                ETdf[i,3] <-fit1_r2
+                ETdf[i,4] <-fit1_rmse
+                rmsematrix1[var_pairs[i,1], var_pairs[i,2]] = fit1_rmse
+        },silent=F)
+}
+r2matrix1
+rmsematrix1
+#grab the position of the best E and tau from the matrix. 
+bestET <-which(rmsematrix1==min(rmsematrix1,na.rm=T),arr.ind=T)
+bestE <-as.numeric(noquote(rownames(bestET)))
+bestTau <-as.numeric(bestET[2])
+
+
+#########Make 30 year datasets + ten year test dataset to fit GPs###
 ### Remember to log transform the value ###
-p1 <-filter(preylist1, time_step >=300 & time_step <= 340)%>% as.data.frame()%>%mutate(value=log(value))
+p1 <-filter(preylist1, time_step >=300 & time_step <= 350)%>% as.data.frame()%>%mutate(value=log(value))
+
+#p1Lags = makelags(data=p1, y="value", pop="age_class", E=bestE, tau=bestTau)
 p1Lags = makelags(data=p1, y="value", pop="age_class", E=round(sqrt(30)), tau=1)
 p1 = cbind(p1,p1Lags)
-p1.train = filter(p1, time_step <= (max(p1$time_step)-10))
-p1.test = filter(p1, time_step > (max(p1$time_step)-10))
+p1.train = filter(p1, time_step <= (max(p1$time_step)-20))
+p1.test = filter(p1, time_step > (max(p1$time_step)-20))
 
 p1gp <-fitGP(data = p1.train, y = "value", x=colnames(p1Lags),newdata=p1.test,pop="age_class",scaling = "local",predictmethod = "loo")
 
@@ -93,7 +130,7 @@ p1res <-bind_rows(sumtotal, p1res)%>%arrange(time_step, age_class)
 
 #in order to get data for the "value" column of p1res for the aggregate prediction, 
 #we will have to add the raw data - note that it is unlogged at present. 
-rawta <-filter(preylist1, time_step >=300 & time_step <= 340)%>% 
+rawta <-filter(preylist1, time_step >=300 & time_step <= 350)%>% 
         group_by(time_step)%>%summarize(TA=sum(value))%>%
         mutate(age_class="aggregate")
 
@@ -107,8 +144,8 @@ p1.5res <-mutate(p1.5res, value=ifelse(age_class=="aggregate" & is.na(value), TA
 ta1 <-rawta%>% as.data.frame()%>%mutate(value=log(TA))
 ta1Lags = makelags(data=ta1, y="value", pop="age_class", E=round(sqrt(30)), tau=1)
 ta1 = cbind(ta1,ta1Lags)
-ta1.train = filter(ta1, time_step <= (max(ta1$time_step)-10))
-ta1.test = filter(ta1, time_step > (max(ta1$time_step)-10))
+ta1.train = filter(ta1, time_step <= (max(ta1$time_step)-20))
+ta1.test = filter(ta1, time_step > (max(ta1$time_step)-20))
 #fit the GP
 ta1gp <-fitGP(data = ta1.train, y = "value", x=colnames(ta1Lags),newdata=ta1.test,pop="age_class",scaling = "local",predictmethod = "loo")
 #extract the results and convert out of log scale

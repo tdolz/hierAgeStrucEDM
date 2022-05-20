@@ -72,19 +72,10 @@ mixed_age <-function(df, maxE){
  fitstats <-bind_rows(fitstats)%>%as.data.frame()%>%mutate(across(OOS_R2:df, as.numeric))
 }
 ######################################################################################################################
-######## count peaks function ###############
-count_peaks <-function(x){
- mph <-max(x)/10 #the minimum peak height has to be 1/10 the height of the peak. 
- x <-findpeaks(x, minpeakheight = mph)
- x <-dim(x)[1]
- x[is.null(x)] <-0 #if there are no peaks return 0. 
- x
-}
 ######################################################################################################################
 ######################################################################################################################
 ######################################################################################################################
 ############### FUNCTION TO COMPARE #######################
-plist <-preylist[[1]]
 
 MIXM30 <- function(plist,maxE){
  plist<-as.data.frame(plist)
@@ -141,159 +132,26 @@ MIXM30 <- function(plist,maxE){
  fitstats <-bind_rows(fitstats,fitstats2)
 }
 
-################################ TWO SPP XXL LOOP ####################################################################
-########################### CREATE THE PREYLISTS ###################################################################################################
+################################## IMPORT THE DATA #############################################
+preylist1 <-read.csv("Simulation1_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
+  pivot_longer(3:22, names_to = "age_class")%>%as.data.frame()
+preylist1 <-split(preylist1, f=preylist1$index)
 
-maxiter = 2 #try making 200 of them and deleting all the zero peak one.s 
-preylist<-list()
-predlist<-list()
-count0peaks <-list()
-recnoise <-matrix(nrow=maxiter, ncol=4)
-colnames(recnoise)<-c("recnoise1","recnoise2","meanpeaks","varprey")
+preylist2 <-read.csv("Simulation2_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
+  pivot_longer(3:23, names_to = "age_class")%>%as.data.frame()%>%filter(age_class !="V21")
+preylist2 <-split(preylist2, f=preylist2$index)
 
-
-for (m in 1:maxiter){
- 
- ##### RECRUITMENT OPTIONS ####
- #Species 1 - Prey
- phi1 = 1/1000
- sdrec1 = .02  
- recnoise1 =rnorm(1,0,0.2)
- qfec1 = c(0,0,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1) #prey consumption conversion efficiency (< 1)
- qfec1=qfec1*8 
- CM1 = 0.01 #modifier of the pred_eat_prey matrix 0.01
- basefec1=c(0,0,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100) # prey
- BM1 = 2 #basefec modifier
- 
- #Species 2 - Predator
- phi2 = 1/100
- sdrec2 = .02 
- recnoise2=rnorm(1,0,0.2)
- qfec2 = c(0,0,0,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1) #pred consumption conversion efficiency (< 1)
- qfec2=qfec2*8 #8 is good
- CM2 = .05 #prey eat pred 0.1, 0.05 for steves pred matrix. 
- basefec2=c(0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)
- BM2 = 2 #basefec modifier 2 is good
- 
- # constants common to both species (for now)#
- t = 500 # num time steps
- N01 = 1000 #initial prey #1000 is good
- N02 = N01/10 #initial pred N0/10 is good. 
- Am = 20
- ages = seq(1,Am,1)
- nsurv=0.8^(ages-1) #both species start out with the same age structure. 
- 
- #make two population matrices
- pop1=matrix(nrow=Am, ncol=t) #matrix of 11 ages (columns) and 500 time steps (rows)
- pop2=matrix(nrow=Am, ncol=t)
- pop1[,1]=N01*nsurv #populate first time step (column) for species 1
- pop2[,1]=N02*nsurv #populate the first time step for species 2
- 
- #fecundity matrices
- fec1=matrix(nrow=Am, ncol=t) #prey
- fec2=matrix(nrow=Am, ncol=t) #predator
- #Baseline fecundity: Populate the first column (time step) of the fecundity matrix
- fec1[,1]=basefec1
- fec2[,1]=basefec2
- 
- #predators eat prey at a rate which increases with age.
- #prey never really escape predation but predation is diminished. 
- #Reverse the matrix order 
- #pred_eat_prey=read.csv("predatormatrix.csv", header=FALSE)%>%as.matrix()
- #pred_eat_prey=read.csv("stevespredatormatrix.csv", header=FALSE)%>%as.matrix()
- pred_eat_prey=read.csv("predmatrix_shortosc.csv", header=FALSE)%>%as.matrix() #the shorter oscillations. 
- colnames(pred_eat_prey)<- NULL
- #multiply by 0
- pred_eat_prey=pred_eat_prey*CM1 
- 
- #prey only eat predators as eggs (for now)
- prey_eat_pred=read.csv("preymatrix.csv", header=FALSE)%>%as.matrix()
- colnames(prey_eat_pred)<- NULL
- #multiply by 0
- prey_eat_pred=prey_eat_pred*CM2
- 
- ### TIME LOOP ####
- for (i in 1:t-1){ #columns
-  if (i == 1) { #skip the first time step (column) because it is already populated.
-   next
-  }
-  ### FECUNDITY
-  for(j in 1:Am){  #rows
-   #fecundity is the rate at which eater is eating*the thing being eaten across ages*
-   fec1[j,i] = pop1[j,i-1]*(basefec1[j]+qfec1[j]*prey_eat_pred[j,]%*%pop2[,i-1]) #fecundity of prey
-   fec2[j,i] = pop2[j,i-1]*(basefec2[j]+qfec2[j]*pred_eat_prey[j,]%*%pop1[,i-1]) #fecundity of pred
-  }
-  ####RECRUITMENT#####
-  ####
-  for(j in 1:Am){
-   if (j == 1) {
-    pop1[j,i]=sum(fec1[,i])*exp(-phi1*sum(fec1[,i]))*exp(sdrec1*recnoise1)
-    pop2[j,i]=sum(fec2[,i])*exp(-phi2*sum(fec2[,i]))*exp(sdrec2*recnoise2) 
-   }
-   #regular survival
-   else{
-    pop1[j,i]=pop1[j-1,i-1]*exp(-sum(pred_eat_prey[,j-1]*pop2[,i-1]))
-    pop2[j,i]=pop2[j-1,i-1]*exp(-sum(prey_eat_pred[,j-1]*pop1[,i-1]))
-   }
-  }
- }
- ### age specific ###
- prey <-as.data.frame(t(pop1)) %>% rownames_to_column(var="time_step") %>%
-  mutate(time_step=as.numeric(time_step)); prey <-prey[-500,]
- preypiv <-pivot_longer(prey, 2:21, names_to = "age_class")
- pred <-as.data.frame(t(pop2)) %>% rownames_to_column(var="time_step") %>%
-  mutate(time_step=as.numeric(time_step)); pred <-pred[-500,]
- predpiv <-pivot_longer(pred, 2:21, names_to = "age_class")
- 
- #outputs
- groupmeans <-preypiv %>% group_by(age_class)%>%summarize(preymeans=mean(value))
- predmeans <-predpiv %>% group_by(age_class)%>%summarize(predmeans=mean(value))
- 
- mgroups <-min(groupmeans$preymeans)
- mpreds <-min(predmeans$predmeans)
- 
- #count peaks
- countpeaks <-preypiv %>%filter(time_step > 299 & time_step < 310)%>%
-  dplyr::select(-time_step)%>% group_by(age_class)%>%summarize(pks = count_peaks(value))
- 
- #prey variance
- preyvar <-preypiv %>%group_by(age_class)%>%summarize(varprey=var(value))
- 
- #store recnoises and mean peaks
- recnoise[m,1]<-recnoise1
- recnoise[m,2]<-recnoise2
- recnoise[m,3]<-mean(countpeaks$pks)
- recnoise[m,4]<-mean(preyvar$varprey)
- 
- 
- #if(mgroups > 0.1 & mpreds > 0.1 & mean(countpeaks$pks) > 1.2) {
- if(mean(countpeaks$pks) > 1.2) {
-  preylist[[m]] <- preypiv
- }else
-  preylist[[m]] <- NA
-}
+preylist3 <-read.csv("Simulation3_dataNEW.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
+  pivot_longer(3:22, names_to = "age_class")%>%as.data.frame()
+preylist3 <-split(preylist3, f=preylist3$index)
 
 
 
-##################################################################################################################################
-
-## View and save the preylist. 
-preylist <-preylist[!is.na(preylist)] #remove all NA elements
-length(preylist)
-preylist <-preylist[1:100] #make sure it's 100 units long
-
-## create separate dataframe of preylist and the recruitment noise parameters and save separately. 
-recnoises <-as.data.frame(recnoise)%>%rownames_to_column(var="index")
-recnoises$count0peaks <-unlist(count0peaks)
-preylists <-preylist %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()%>%full_join(recnoises)
-
-#how many peaks on average?
-ntotalpeaks <-preylists %>% group_by(index)%>%summarize(avpks=mean(meanpeaks))
-mean(ntotalpeaks$avpks)
-sd(ntotalpeaks$avpks)
+################################# SIMULATION I ############################################
 
 ## Determine E and tau with a grid
-pgrid <-as.data.frame(preylist[[1]]) %>%filter(age_class !="V21" & time_step >=300 & time_step < 330)
+pgrid <-as.data.frame(preylist1[[1]]) %>%filter(age_class !="V21" & time_step >=300 & time_step < 330)
+pgrid <-mutate(pgrid, value=log(value))
 
 Ees <-seq(2,10,1)
 taus <-seq(1,3,1)
@@ -304,38 +162,126 @@ ETdf[,2]<-var_pairs[,2]
 r2matrix1 = array(NA, dim = c(length(Ees), length(taus)), dimnames = list(Ees,taus)) 
 rmsematrix1 = array(NA, dim = c(length(Ees), length(taus)), dimnames = list(Ees,taus)) 
 for (i in 1:nrow(var_pairs)) {
- try({
-  fit1 <-fitGP(data = pgrid, yd = "value", pop="age_class",scaling = "local", E=var_pairs[i,1], tau=var_pairs[i,2], predictmethod = "loo")
-  fit1_r2 <-fit1$outsampfitstats[[1]]
-  fit1_rmse <-fit1$outsampfitstats[[2]]
-  r2matrix1[var_pairs[i,1], var_pairs[i,2]] = fit1_r2
-  ETdf[i,3] <-fit1_r2
-  ETdf[i,4] <-fit1_rmse
-  rmsematrix1[var_pairs[i,1], var_pairs[i,2]] = fit1_rmse
- },silent=T)
+  try({
+    fit1 <-fitGP(data = pgrid, y = "value", pop="age_class",scaling = "local", E=var_pairs[i,1], tau=var_pairs[i,2], predictmethod = "loo")
+    fit1_r2 <-fit1$outsampfitstats[[1]]
+    fit1_rmse <-fit1$outsampfitstats[[2]]
+    r2matrix1[var_pairs[i,1], var_pairs[i,2]] = fit1_r2
+    ETdf[i,3] <-fit1_r2
+    ETdf[i,4] <-fit1_rmse
+    rmsematrix1[var_pairs[i,1], var_pairs[i,2]] = fit1_rmse
+  },silent=F)
 }
 r2matrix1
 rmsematrix1
-# best is Tau = 1, E =6, but the real best is Tau =3, E=9 (Throws out a lot of data)
-#using an E=5 is not substantially worse. 
+#grab the position of the best E and tau from the matrix. 
 
-#write.csv(preylists,"preylists2sppXXLSHORTOSC_mixed100.csv")
 
-##################################################################################################################################
-##### Apply the function ########
 
 ############## Test the function
-foo <-MIXM30(preylist[[1]], maxE=5) 
+foo <-MIXM30(preylist1[[1]], maxE=5) 
 
-######## Test with the mclapply function #########
+######## Test with the mclapply function
 numCores = detectCores()
-system.time(parafoo <-mclapply(preylist, MIXM30, mc.cores=numCores))
+system.time(parafoo1 <-mclapply(preylist1, MIXM30, mc.cores=numCores))
 
 #### check outputs
-length(purrr::keep(parafoo, is.list)) #how much will it reduce the length by?
-parafoo <-purrr::keep(parafoo, is.list) # permanently remove all NA elements
+length(purrr::keep(parafoo1, is.list)) #how much will it reduce the length by?
+parafoo1 <-purrr::keep(parafoo1, is.list) # permanently remove all NA elements
 
-################# bind the list into a DF #################################
+##########bind the list into a DF
+Output30_1 <-parafoo1 %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()
 
-Output30 <-parafoo %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()
+#############################################################################################
+######################## SIMULATION II ###########################################################
 
+## Determine E and tau with a grid
+pgrid <-as.data.frame(preylist2[[1]]) %>%filter(age_class !="V21" & time_step >=300 & time_step < 330)
+pgrid <-mutate(pgrid, value=log(value))
+
+Ees <-seq(2,10,1)
+taus <-seq(1,3,1)
+var_pairs = expand.grid(Ees, taus) # Combinations of vars, 2 at a time
+ETdf <-matrix(nrow=dim(var_pairs)[1],ncol=4)
+ETdf[,1]<-var_pairs[,1]
+ETdf[,2]<-var_pairs[,2]
+r2matrix2 = array(NA, dim = c(length(Ees), length(taus)), dimnames = list(Ees,taus)) 
+rmsematrix2 = array(NA, dim = c(length(Ees), length(taus)), dimnames = list(Ees,taus)) 
+for (i in 1:nrow(var_pairs)) {
+  try({
+    fit1 <-fitGP(data = pgrid, y = "value", pop="age_class",scaling = "local", E=var_pairs[i,1], tau=var_pairs[i,2], predictmethod = "loo")
+    fit1_r2 <-fit1$outsampfitstats[[1]]
+    fit1_rmse <-fit1$outsampfitstats[[2]]
+    r2matrix1[var_pairs[i,1], var_pairs[i,2]] = fit1_r2
+    ETdf[i,3] <-fit1_r2
+    ETdf[i,4] <-fit1_rmse
+    rmsematrix1[var_pairs[i,1], var_pairs[i,2]] = fit1_rmse
+  },silent=F)
+}
+r2matrix2
+rmsematrix2
+
+
+############## Test the function
+foo <-MIXM30(preylist2[[1]], maxE=5) 
+
+######## Test with the mclapply function
+numCores = detectCores()
+system.time(parafoo1 <-mclapply(preylist2, MIXM30, mc.cores=numCores))
+
+#### check outputs
+length(purrr::keep(parafoo2, is.list)) #how much will it reduce the length by?
+parafoo1 <-purrr::keep(parafoo2, is.list) # permanently remove all NA elements
+
+##########bind the list into a DF
+Output30_2 <-parafoo2 %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()%>%
+  mutate(Sim="II")
+
+#############################################################################################
+######################## SIMULATION III ###########################################################
+
+## Determine E and tau with a grid
+pgrid <-as.data.frame(preylist3[[1]]) %>%filter(age_class !="V21" & time_step >=300 & time_step < 330)
+pgrid <-mutate(pgrid, value=log(value))
+
+Ees <-seq(2,10,1)
+taus <-seq(1,3,1)
+var_pairs = expand.grid(Ees, taus) # Combinations of vars, 2 at a time
+ETdf <-matrix(nrow=dim(var_pairs)[1],ncol=4)
+ETdf[,1]<-var_pairs[,1]
+ETdf[,2]<-var_pairs[,2]
+r2matrix3 = array(NA, dim = c(length(Ees), length(taus)), dimnames = list(Ees,taus)) 
+rmsematrix3 = array(NA, dim = c(length(Ees), length(taus)), dimnames = list(Ees,taus)) 
+for (i in 1:nrow(var_pairs)) {
+  try({
+    fit1 <-fitGP(data = pgrid, y = "value", pop="age_class",scaling = "local", E=var_pairs[i,1], tau=var_pairs[i,2], predictmethod = "loo")
+    fit1_r2 <-fit1$outsampfitstats[[1]]
+    fit1_rmse <-fit1$outsampfitstats[[2]]
+    r2matrix1[var_pairs[i,1], var_pairs[i,2]] = fit1_r2
+    ETdf[i,3] <-fit1_r2
+    ETdf[i,4] <-fit1_rmse
+    rmsematrix1[var_pairs[i,1], var_pairs[i,2]] = fit1_rmse
+  },silent=F)
+}
+r2matrix3
+rmsematrix3
+
+
+############## Test the function
+foo <-MIXM30(preylist3[[1]], maxE=5) 
+
+######## Test with the mclapply function
+numCores = detectCores()
+system.time(parafoo3 <-mclapply(preylist2, MIXM30, mc.cores=numCores))
+
+#### check outputs
+length(purrr::keep(parafoo3, is.list)) #how much will it reduce the length by?
+parafoo1 <-purrr::keep(parafoo3, is.list) # permanently remove all NA elements
+
+##########bind the list into a DF
+Output30_3 <-parafoo3 %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()%>%
+  mutate(Sim="III")
+
+MixedAgeOUT <-bind_rows(Output30_1,Output30_2,Output30_3)
+
+write.csv(MixedAgeOUT,"mixedageout.csv")
