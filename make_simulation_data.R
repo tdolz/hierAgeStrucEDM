@@ -4,7 +4,9 @@
 ### created 3/18/22
 ## updated 3/24/22 Great job!
 ## UPDATED 4/28/22. Original values can be found in "simulation_sandbox.R"
-### WE ARE UP TO FIXING SIMULATION II
+## updated 5/20/22 from "comparison of simulations for steve.Rmd" 
+
+
 source("analysis_functions.R")
 devtools::install_github("tanyalrogers/GPEDM")
 library(dplyr)
@@ -17,6 +19,8 @@ library(Metrics)
 library(corrplot)
 library(pracma)
 library(parallel)
+library(gridExtra)
+library(cowplot)
 
 ##################################################### Simulation I #####################################################################################
 ##################################################### ONE SPECIES ######################################################################################
@@ -93,13 +97,14 @@ for (m in 1:maxiter){
     
     
     #if(mean(meanper$periodt)<10) { #we can't get them all in there unfortunately. 
-      preylist[[m]] <- prey
-   # }else
+    preylist[[m]] <- prey
+    # }else
     #  preylist[[m]] <- NA
     
   }, error=function(e){})
   
 }
+
 
 ##############################################################
 ####################
@@ -110,29 +115,26 @@ preylist <-preylist[!sapply(preylist,is.null)] #remove all null elements
 length(preylist)
 preylist <-preylist[1:100] #make sure it's 100 units long
 
+#some data formatting
+preylists <-preylist %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()
+preypiv <- preylists%>%pivot_longer(3:22, names_to = 'age_class')
+preypiv$age_class = fct_relevel(preypiv$age_class, c("V1","V2","V3","V4","V5","V6","V7","V8","V9","V10","V11","V12","V13","V14","V15","V16","V17","V18","V19","V20"))
+preypiv$age_class = fct_recode(preypiv$age_class, "age 1"="V1","age 2"="V2","age 3"="V3","age 4"="V4","age 5"="V5","age 6"="V6", "age 7"="V7", "age 8"="V8","age 9"="V9",
+                               "age 10"="V10","age 11"="V11","age 12"="V12","age 13"="V13", "age 14"="V14",'age 15'='V15',"age 16"='V16','age 17'= "V17",'age 18'="V18","age 19"="V19","age 20"="V20")
+
 ## create separate dataframe of preylist and the recruitment noise parameters and save separately. 
 recnoises <-as.data.frame(recnoise)%>%rownames_to_column(var="index")
 recnoises$count0peaks <-unlist(count0peaks)
 
-#how many peaks on average?
-ntotalpeaks <-recnoises %>% group_by(index)%>%summarize(avpks=mean(meanpeaks))
-mean(ntotalpeaks$avpks, na.rm=T)
-sd(ntotalpeaks$avpks, na.rm=T)
-
 #what is the period?
 mean(recnoises$meanPeriod, na.rm=T)
 sd(recnoises$meanPeriod, na.rm=T)
+median(recnoises$meanPeriod, na.rm=T)
 
 preylists <-preylist %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()
 
-preypiv <- preylists%>%pivot_longer(3:22, names_to = 'age_class')
-
-preypiv$age_class = fct_relevel(preypiv$age_class, c("V1","V2","V3","V4","V5","V6","V7","V8",
-                                                         "V9","V10","V11","V12","V13","V14","V15","V16","V17","V18","V19","V20"))
-preypiv$age_class = fct_recode(preypiv$age_class, "age 1"="V1","age 2"="V2","age 3"="V3","age 4"="V4","age 5"="V5","age 6"="V6",
-                                 "age 7"="V7", "age 8"="V8","age 9"="V9","age 10"="V10","age 11"="V11","age 12"="V12","age 13"="V13",
-                                 "age 14"="V14",'age 15'='V15',"age 16"='V16','age 17'= "V17",'age 18'="V18","age 19"="V19","age 20"="V20")
-
+##summarize across runs, mean and sd.. 
+preylist.mean <-preypiv%>%group_by(time_step,age_class)%>%summarize(mean.value=mean(value),sd.value=sd(value),.groups='drop')
 
 #just look at the first one, not the mean
 preypiv%>%
@@ -147,9 +149,6 @@ preypiv%>%
 ggsave("sim1_run1.png")
 #ggsave("sim1_run1.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
-
-##visualize the data to make sure it's ok. 
-preylist.mean <-preypiv%>%group_by(time_step,age_class)%>%summarize(mean.value=mean(value),sd.value=sd(value),.groups='drop')
 
 preylist.mean%>%
  ggplot(aes(time_step,mean.value))+
@@ -173,14 +172,87 @@ ggsave("sim1_post_burnin.png")
 dev.off()
 
 
+#grob plot of each age by itself the previous year.  
+agelist <-unique(preypiv$age_class)
+plotlist <-list()
+for (i in 2:length(agelist)){
+  
+  df <-preypiv%>%
+    filter(time_step >= 299 & time_step <=401)%>%
+    filter(age_class==agelist[i] | age_class==agelist[i-1])%>%
+    pivot_wider(id_cols=1:2, names_from = age_class, values_from = value)
+  
+  prev_yrcls_lag=lag(df[,3],1)
+  df<-as.data.frame(cbind(df,prev_yrcls_lag))
+  names(df)<-c("index","time_step","yrcls","yrPlus1","yrlag")
+  df <-dplyr::select(df, -yrcls)%>%filter(time_step >= 300 & time_step <=400)
+  
+  p <-ggplot(df,aes(yrlag,yrPlus1, color=as.factor(index)))+
+    geom_line()+
+    ylab(paste(agelist[i],"(t)"))+xlab(paste(agelist[i-1], "(t-1)"))+
+    guides(color="none")+
+    theme_classic()
+  
+  plotlist[[i]]<-p
+}
+plotlist<-plotlist[2:20]
+
+row1 <-plot_grid(plotlist[[1]],plotlist[[2]],plotlist[[3]],plotlist[[4]],plotlist[[5]],ncol=5)
+row2 <-plot_grid(plotlist[[6]],plotlist[[7]],plotlist[[8]],plotlist[[9]],plotlist[[10]],ncol=5)
+row3 <-plot_grid(plotlist[[11]],plotlist[[12]],plotlist[[13]],plotlist[[14]],plotlist[[15]],ncol=5)
+row4 <-plot_grid(plotlist[[16]],plotlist[[17]],plotlist[[18]],plotlist[[19]],ncol=5)
+
+y.grob <-textGrob("Year Class (t)", gp=gpar(fontface="bold",col="black",fontsize=12),rot=90)
+x.grob <-textGrob("Prev Year Class (t-1)", gp=gpar(fontface="bold",col="black",fontsize=12))
+top.grob <-textGrob("Year class vs. itself", gp=gpar(fontface="bold",col="black",fontsize=12))
+
+mainplot <-plot_grid(row1,row2,row3,row4, nrow=4)
+grid.arrange(arrangeGrob(mainplot, left=y.grob, bottom=x.grob,top=top.grob, padding=unit(0,"line")))
+ggsave("sim1_ycvsitself.png")
+
+####NO LAG###
+#grob plot of each age by itself the previous year.  
+agelist <-unique(preypiv$age_class)
+plotlist <-list()
+for (i in 2:length(agelist)){
+  
+  df <-preypiv%>%
+    filter(time_step >= 300 & time_step <=400)%>%
+    filter(age_class==agelist[i] | age_class==agelist[i-1])%>%
+    pivot_wider(id_cols=1:2, names_from = age_class, values_from = value)
+  names(df)<-c("index","time_step","yrcls","yrPlus1")
+  
+  p <-ggplot(df,aes(yrcls,yrPlus1, color=as.factor(index)))+
+    geom_line()+
+    ylab(paste(agelist[i],"(t)"))+xlab(paste(agelist[i-1], "(t)"))+
+    guides(color="none")+
+    theme_classic()
+  
+  plotlist[[i]]<-p
+}
+plotlist<-plotlist[2:20]
+#plotlist
+
+row1 <-plot_grid(plotlist[[1]],plotlist[[2]],plotlist[[3]],plotlist[[4]],plotlist[[5]],ncol=5)
+row2 <-plot_grid(plotlist[[6]],plotlist[[7]],plotlist[[8]],plotlist[[9]],plotlist[[10]],ncol=5)
+row3 <-plot_grid(plotlist[[11]],plotlist[[12]],plotlist[[13]],plotlist[[14]],plotlist[[15]],ncol=5)
+row4 <-plot_grid(plotlist[[16]],plotlist[[17]],plotlist[[18]],plotlist[[19]],ncol=5)
+
+y.grob <-textGrob("age i (t)", gp=gpar(fontface="bold",col="black",fontsize=12),rot=90)
+x.grob <-textGrob("age i-1 (t)", gp=gpar(fontface="bold",col="black",fontsize=12))
+top.grob <-textGrob("age vs previous age", gp=gpar(fontface="bold",col="black",fontsize=12))
+
+mainplot <-plot_grid(row1,row2,row3,row4, nrow=4)
+grid.arrange(arrangeGrob(mainplot, left=y.grob, bottom=x.grob,top=top.grob, padding=unit(0,"line")))
+ggsave("sim1_ycvsprevyr.png")
+
+
+
 preylists <-preylists %>%
  filter(time_step > 299)
 
 write.csv(preylists,"Simulation1_data.csv")
 write.csv(recnoises,"sim1_info.csv")
-
-
-
 
 
 ###############################Simulation II############################################################################
@@ -292,20 +364,21 @@ for (m in 1:maxiter){
     recnoise[m,4]<-mean(preyvar$varprey)
     recnoise[m,5]<-mean(meanper$periodt)
     recnoise[m,6]<-sd(meanper$periodt)
-
+    
     
     #mean period governor
-    if(mean(meanper$periodt)<10) { #we can't get them all in there unfortunately. 
-      preylist[[m]] <- prey
-    }else
-      preylist[[m]] <- NA
+    #if(mean(meanper$periodt)<10) { #we can't get them all in there unfortunately. 
+    #  preylist[[m]] <- prey
+    #}else
+    #  preylist[[m]] <- NA
     
     #no governor
-    #preylist[[m]] <- prey
+    preylist[[m]] <- prey
     
   }, error=function(e){})
   
 }
+
 
 ##############################################################
 ####################
@@ -316,29 +389,26 @@ preylist <-preylist[!sapply(preylist,is.null)] #remove all null elements
 length(preylist)
 preylist <-preylist[1:100] #make sure it's 100 units long
 
+#some data formatting
+preylists <-preylist %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()
+preypiv <- preylists%>%pivot_longer(3:23, names_to = 'age_class')
+preypiv$age_class = fct_relevel(preypiv$age_class, c("V1","V2","V3","V4","V5","V6","V7","V8",                                                     "V9","V10","V11","V12","V13","V14","V15","V16","V17","V18","V19","V20"))
+preypiv$age_class = fct_recode(preypiv$age_class, "age 1"="V1","age 2"="V2","age 3"="V3","age 4"="V4","age 5"="V5","age 6"="V6", "age 7"="V7", "age 8"="V8","age 9"="V9","age 10"="V10","age 11"="V11","age 12"="V12","age 13"="V13", "age 14"="V14",'age 15'='V15',"age 16"='V16','age 17'= "V17",'age 18'="V18","age 19"="V19","age 20"="V20", "age 21"="V21")
+
+
 ## create separate dataframe of preylist and the recruitment noise parameters and save separately. 
 recnoises <-as.data.frame(recnoise)%>%rownames_to_column(var="index")
 recnoises$count0peaks <-unlist(count0peaks)
 
-#how many peaks on average?
-ntotalpeaks <-recnoises %>% group_by(index)%>%summarize(avpks=mean(meanpeaks))
-mean(ntotalpeaks$avpks, na.rm=T)
-sd(ntotalpeaks$avpks, na.rm=T)
-
 #what is the period?
 mean(recnoises$meanPeriod, na.rm=T)
 sd(recnoises$meanPeriod, na.rm=T)
+median(recnoises$meanPeriod, na.rm=T)
 
 preylists <-preylist %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()
 
-preypiv <- preylists%>%pivot_longer(3:23, names_to = 'age_class')
-
-preypiv$age_class = fct_relevel(preypiv$age_class, c("V1","V2","V3","V4","V5","V6","V7","V8",
-                                                     "V9","V10","V11","V12","V13","V14","V15","V16","V17","V18","V19","V20","V21"))
-preypiv$age_class = fct_recode(preypiv$age_class, "age 1"="V1","age 2"="V2","age 3"="V3","age 4"="V4","age 5"="V5","age 6"="V6",
-                               "age 7"="V7", "age 8"="V8","age 9"="V9","age 10"="V10","age 11"="V11","age 12"="V12","age 13"="V13",
-                               "age 14"="V14",'age 15'='V15',"age 16"='V16','age 17'= "V17",'age 18'="V18","age 19"="V19","age 20"="V20","age 21+"="V21")
-
+##visualize the data to make sure it's ok. 
+preylist.mean <-preypiv%>%group_by(time_step,age_class)%>%summarize(mean.value=mean(value),sd.value=sd(value),.groups='drop')
 
 #just look at the first one, not the mean
 preypiv%>%
@@ -353,9 +423,6 @@ preypiv%>%
 ggsave("sim2_run1.png")
 #ggsave("sim2_run1.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
-
-##visualize the data to make sure it's ok. 
-preylist.mean <-preypiv%>%group_by(time_step,age_class)%>%summarize(mean.value=mean(value),sd.value=sd(value),.groups='drop')
 
 preylist.mean%>%
   ggplot(aes(time_step,mean.value))+
@@ -377,6 +444,81 @@ preylist.mean%>%
 ggsave("sim2_post_burnin.png")
 #ggsave("sim2_post_burnin.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
+
+#grob plot of each age by itself the previous year.  
+agelist <-unique(preypiv$age_class)
+plotlist <-list()
+for (i in 2:length(agelist)){
+  
+  df <-preypiv%>%
+    filter(time_step >= 299 & time_step <=401)%>%
+    filter(age_class==agelist[i] | age_class==agelist[i-1])%>%
+    pivot_wider(id_cols=1:2, names_from = age_class, values_from = value)
+  
+  prev_yrcls_lag=lag(df[,3],1)
+  df<-as.data.frame(cbind(df,prev_yrcls_lag))
+  names(df)<-c("index","time_step","yrcls","yrPlus1","yrlag")
+  df <-dplyr::select(df, -yrcls)%>%filter(time_step >= 300 & time_step <=400)
+  
+  p <-ggplot(df,aes(yrlag,yrPlus1, color=as.factor(index)))+
+    geom_line()+
+    ylab(paste(agelist[i],"(t)"))+xlab(paste(agelist[i-1], "(t-1)"))+
+    guides(color="none")+
+    theme_classic()
+  
+  plotlist[[i]]<-p
+}
+plotlist<-plotlist[2:20]
+#plotlist
+
+row1 <-plot_grid(plotlist[[1]],plotlist[[2]],plotlist[[3]],plotlist[[4]],plotlist[[5]],ncol=5)
+row2 <-plot_grid(plotlist[[6]],plotlist[[7]],plotlist[[8]],plotlist[[9]],plotlist[[10]],ncol=5)
+row3 <-plot_grid(plotlist[[11]],plotlist[[12]],plotlist[[13]],plotlist[[14]],plotlist[[15]],ncol=5)
+row4 <-plot_grid(plotlist[[16]],plotlist[[17]],plotlist[[18]],plotlist[[19]],ncol=5)
+
+y.grob <-textGrob("Year Class (t)", gp=gpar(fontface="bold",col="black",fontsize=12),rot=90)
+x.grob <-textGrob("Prev Year Class (t-1)", gp=gpar(fontface="bold",col="black",fontsize=12))
+top.grob <-textGrob("Year class vs. itself", gp=gpar(fontface="bold",col="black",fontsize=12))
+
+mainplot <-plot_grid(row1,row2,row3,row4, nrow=4)
+grid.arrange(arrangeGrob(mainplot, left=y.grob, bottom=x.grob,top=top.grob, padding=unit(0,"line")))
+ggsave("sim2_ycvsitself.png")
+
+####NO LAG###
+#grob plot of each age by itself the previous year.  
+agelist <-unique(preypiv$age_class)
+plotlist <-list()
+for (i in 2:length(agelist)){
+  
+  df <-preypiv%>%
+    filter(time_step >= 300 & time_step <=400)%>%
+    filter(age_class==agelist[i] | age_class==agelist[i-1])%>%
+    pivot_wider(id_cols=1:2, names_from = age_class, values_from = value)
+  names(df)<-c("index","time_step","yrcls","yrPlus1")
+  
+  p <-ggplot(df,aes(yrcls,yrPlus1, color=as.factor(index)))+
+    geom_line()+
+    ylab(paste(agelist[i],"(t)"))+xlab(paste(agelist[i-1], "(t)"))+
+    guides(color="none")+
+    theme_classic()
+  
+  plotlist[[i]]<-p
+}
+plotlist<-plotlist[2:20]
+#plotlist
+
+row1 <-plot_grid(plotlist[[1]],plotlist[[2]],plotlist[[3]],plotlist[[4]],plotlist[[5]],ncol=5)
+row2 <-plot_grid(plotlist[[6]],plotlist[[7]],plotlist[[8]],plotlist[[9]],plotlist[[10]],ncol=5)
+row3 <-plot_grid(plotlist[[11]],plotlist[[12]],plotlist[[13]],plotlist[[14]],plotlist[[15]],ncol=5)
+row4 <-plot_grid(plotlist[[16]],plotlist[[17]],plotlist[[18]],plotlist[[19]],ncol=5)
+
+y.grob <-textGrob("age i (t)", gp=gpar(fontface="bold",col="black",fontsize=12),rot=90)
+x.grob <-textGrob("age i-1 (t)", gp=gpar(fontface="bold",col="black",fontsize=12))
+top.grob <-textGrob("age vs previous age", gp=gpar(fontface="bold",col="black",fontsize=12))
+
+mainplot <-plot_grid(row1,row2,row3,row4, nrow=4)
+grid.arrange(arrangeGrob(mainplot, left=y.grob, bottom=x.grob,top=top.grob, padding=unit(0,"line")))
+ggsave("sim2_ycvsprevyr.png")
 
 
 preylists <-preylists %>%
@@ -521,33 +663,33 @@ for (m in 1:maxiter){
     recnoise[m,6]<-sd(meanper$periodt)
     
     #governor
-    if(mean(meanper$periodt) < 10){
-      preylist[[m]] <- prey
-    }else
-      preylist[[m]] <- NA
+    #if(mean(meanper$periodt) < 10){
+    preylist[[m]] <- prey
+    # }else
+    # preylist[[m]] <- NA
     
     
   }, error=function(e){})
   
 }
 
+
 ##############################################################
 ####################
-## View and save the preylist. 
 preylist <-preylist[!is.na(preylist)] #remove all NA elements
 length(preylist)
 preylist <-preylist[!sapply(preylist,is.null)] #remove all null elements
 length(preylist)
 preylist <-preylist[1:100] #make sure it's 100 units long
 
-## create separate dataframe of preylist and the recruitment noise parameters and save separately. 
+#some data formatting
+preylists <-preylist %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()
+preypiv <- preylists%>%pivot_longer(3:22, names_to = 'age_class')
+preypiv$age_class = fct_relevel(preypiv$age_class, c("V1","V2","V3","V4","V5","V6","V7","V8","V9","V10","V11","V12","V13","V14","V15","V16","V17","V18","V19","V20"))
+preypiv$age_class = fct_recode(preypiv$age_class, "age 1"="V1","age 2"="V2","age 3"="V3","age 4"="V4","age 5"="V5","age 6"="V6", "age 7"="V7", "age 8"="V8","age 9"="V9",
+                               "age 10"="V10","age 11"="V11","age 12"="V12","age 13"="V13", "age 14"="V14",'age 15'='V15',"age 16"='V16','age 17'= "V17",'age 18'="V18","age 19"="V19","age 20"="V20")
 recnoises <-as.data.frame(recnoise)%>%rownames_to_column(var="index")
 recnoises$count0peaks <-unlist(count0peaks)
-
-#how many peaks on average?
-ntotalpeaks <-recnoises %>% group_by(index)%>%summarize(avpks=mean(meanpeaks))
-mean(ntotalpeaks$avpks, na.rm=T)
-sd(ntotalpeaks$avpks, na.rm=T)
 
 #what is the period?
 mean(recnoises$meanPeriod, na.rm=T)
@@ -556,14 +698,8 @@ median(recnoises$meanPeriod, na.rm=T)
 
 preylists <-preylist %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.data.frame()
 
-preypiv <- preylists%>%pivot_longer(3:22, names_to = 'age_class')
-
-preypiv$age_class = fct_relevel(preypiv$age_class, c("V1","V2","V3","V4","V5","V6","V7","V8",
-                                                     "V9","V10","V11","V12","V13","V14","V15","V16","V17","V18","V19","V20"))
-preypiv$age_class = fct_recode(preypiv$age_class, "age 1"="V1","age 2"="V2","age 3"="V3","age 4"="V4","age 5"="V5","age 6"="V6",
-                               "age 7"="V7", "age 8"="V8","age 9"="V9","age 10"="V10","age 11"="V11","age 12"="V12","age 13"="V13",
-                               "age 14"="V14",'age 15'='V15',"age 16"='V16','age 17'= "V17",'age 18'="V18","age 19"="V19","age 20"="V20")
-
+##summarize sim runs to a mean. 
+preylist.mean <-preypiv%>%group_by(time_step,age_class)%>%summarize(mean.value=mean(value),sd.value=sd(value),.groups='drop')
 
 #just look at the first one, not the mean
 preypiv%>%
@@ -593,10 +729,6 @@ ggsave("sim3_run1colors.png")
 #ggsave("sim3_run1.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
-
-##visualize the data to make sure it's ok. 
-preylist.mean <-preypiv%>%group_by(time_step,age_class)%>%summarize(mean.value=mean(value),sd.value=sd(value),.groups='drop')
-
 preylist.mean%>%
   ggplot(aes(time_step,mean.value))+
   geom_line()+
@@ -619,10 +751,86 @@ ggsave("sim3_post_burnin.png")
 dev.off()
 
 
+#grob plot of each age by itself the previous year.  
+agelist <-unique(preypiv$age_class)
+plotlist <-list()
+for (i in 2:length(agelist)){
+  
+  df <-preypiv%>%
+    filter(time_step >= 299 & time_step <=401)%>%
+    filter(age_class==agelist[i] | age_class==agelist[i-1])%>%
+    pivot_wider(id_cols=1:2, names_from = age_class, values_from = value)
+  
+  prev_yrcls_lag=lag(df[,3],1)
+  df<-as.data.frame(cbind(df,prev_yrcls_lag))
+  names(df)<-c("index","time_step","yrcls","yrPlus1","yrlag")
+  df <-dplyr::select(df, -yrcls)%>%filter(time_step >= 300 & time_step <=400)
+  
+  p <-ggplot(df,aes(yrlag,yrPlus1, color=as.factor(index)))+
+    geom_line()+
+    ylab(paste(agelist[i],"(t)"))+xlab(paste(agelist[i-1], "(t-1)"))+
+    guides(color="none")+
+    theme_classic()
+  
+  plotlist[[i]]<-p
+}
+plotlist<-plotlist[2:20]
+#plotlist
+
+row1 <-plot_grid(plotlist[[1]],plotlist[[2]],plotlist[[3]],plotlist[[4]],plotlist[[5]],ncol=5)
+row2 <-plot_grid(plotlist[[6]],plotlist[[7]],plotlist[[8]],plotlist[[9]],plotlist[[10]],ncol=5)
+row3 <-plot_grid(plotlist[[11]],plotlist[[12]],plotlist[[13]],plotlist[[14]],plotlist[[15]],ncol=5)
+row4 <-plot_grid(plotlist[[16]],plotlist[[17]],plotlist[[18]],plotlist[[19]],ncol=5)
+
+y.grob <-textGrob("Year Class (t)", gp=gpar(fontface="bold",col="black",fontsize=12),rot=90)
+x.grob <-textGrob("Prev Year Class (t-1)", gp=gpar(fontface="bold",col="black",fontsize=12))
+top.grob <-textGrob("Year class vs. itself", gp=gpar(fontface="bold",col="black",fontsize=12))
+
+mainplot <-plot_grid(row1,row2,row3,row4, nrow=4)
+grid.arrange(arrangeGrob(mainplot, left=y.grob, bottom=x.grob,top=top.grob, padding=unit(0,"line")))
+ggsave("sim3_ycvsitself.png")
+
+####NO LAG###
+#grob plot of each age by itself the previous year.  
+agelist <-unique(preypiv$age_class)
+plotlist <-list()
+for (i in 2:length(agelist)){
+  
+  df <-preypiv%>%
+    filter(time_step >= 300 & time_step <=400)%>%
+    filter(age_class==agelist[i] | age_class==agelist[i-1])%>%
+    pivot_wider(id_cols=1:2, names_from = age_class, values_from = value)
+  names(df)<-c("index","time_step","yrcls","yrPlus1")
+  
+  p <-ggplot(df,aes(yrcls,yrPlus1, color=as.factor(index)))+
+    geom_line()+
+    ylab(paste(agelist[i],"(t)"))+xlab(paste(agelist[i-1], "(t)"))+
+    guides(color="none")+
+    theme_classic()
+  
+  plotlist[[i]]<-p
+}
+plotlist<-plotlist[2:20]
+#plotlist
+
+row1 <-plot_grid(plotlist[[1]],plotlist[[2]],plotlist[[3]],plotlist[[4]],plotlist[[5]],ncol=5)
+row2 <-plot_grid(plotlist[[6]],plotlist[[7]],plotlist[[8]],plotlist[[9]],plotlist[[10]],ncol=5)
+row3 <-plot_grid(plotlist[[11]],plotlist[[12]],plotlist[[13]],plotlist[[14]],plotlist[[15]],ncol=5)
+row4 <-plot_grid(plotlist[[16]],plotlist[[17]],plotlist[[18]],plotlist[[19]],ncol=5)
+
+y.grob <-textGrob("age i (t)", gp=gpar(fontface="bold",col="black",fontsize=12),rot=90)
+x.grob <-textGrob("age i-1 (t)", gp=gpar(fontface="bold",col="black",fontsize=12))
+top.grob <-textGrob("age vs previous age", gp=gpar(fontface="bold",col="black",fontsize=12))
+
+mainplot <-plot_grid(row1,row2,row3,row4, nrow=4)
+grid.arrange(arrangeGrob(mainplot, left=y.grob, bottom=x.grob,top=top.grob, padding=unit(0,"line")))
+ggsave("sim3_ycvsprevyr.png")
+
+## SAVE 
 preylists <-preylists %>%
   filter(time_step > 299)
 
 #write.csv(preylists,"Simulation3_dataNEW.csv")
-#write.csv(preylists,"Simulation3_data.csv")
+write.csv(preylists,"Simulation3_data.csv")
 #write.csv(recnoises,"sim3_infoNEW.csv")
-#write.csv(recnoises,"sim3_info.csv")
+write.csv(recnoises,"sim3_info.csv")
