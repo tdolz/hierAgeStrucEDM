@@ -2,6 +2,39 @@
 
 List of files for Github:
 
+##### Updates 5/20/22 here ###
+- analysis_functions.R contains functions used in scripts for this project. 
+- make_simulation_data.R does 100 runs of simulations 1-3. 
+    - Inputs: 
+        - predmatrix_shortosc.csv (age specific predation of predators on prey)
+        - preymatrix.csv (age specific predation of prey on predator eggs)
+        - analysis_functions.R
+    - Outputs: 
+        - sim1_info.csv = metadata about simulation 1 runs, including recruitment noise, etc. 
+        - Simulation1_data.csv = the resulting simulated data.
+        - sim1_post_burnin.png = plot of each age class over time (mean over 100 runs) after burn in period. 
+        - sim1_pre_burnin.png = plot of each age class over time (mean over 100 runs) before burn in period.
+        - sim1_run1.png = plot of each age class over time (first run only) after burn in. 
+        - sim1_ycvsitself.png = plot of each year class vs. itself one time step previously
+        - sim1_ycvsprevyr.png = plot of each year class vs. previous age class (same time step). 
+        - sim2_info.csv = metadata about simulation 2 runs, including recruitment noise, etc. 
+        - Simulation2_data.csv = the resulting simulated data.
+        - sim2_post_burnin.png = plot of each age class over time (mean over 100 runs) after burn in period. 
+        - sim2_pre_burnin.png = plot of each age class over time (mean over 100 runs) before burn in period.
+        - sim2_run1.png = plot of each age class over time (first run only) after burn in. 
+        - sim2_ycvsitself.png = plot of each year class vs. itself one time step previously
+        - sim2_ycvsprevyr.png = plot of each year class vs. previous age class (same time step). 
+        - sim3_info.csv = metadata about simulation 3 runs, including recruitment noise, etc. 
+        - Simulation3_data.csv = the resulting simulated data.
+        - sim3_post_burnin.png = plot of each age class over time (mean over 100 runs) after burn in period. 
+        - sim3_pre_burnin.png = plot of each age class over time (mean over 100 runs) before burn in period.
+        - sim3_run1.png = plot of each age class over time (first run only) after burn in. 
+        - sim3_ycvsitself.png = plot of each year class vs. itself one time step previously
+        - sim3_ycvsprevyr.png = plot of each year class vs. previous age class (same time step). 
+
+
+######## Previous structure ################
+
 - dyrho_parallel.R calculates the lagged correlation and pairwise dynamic rho for each simulation. 
     - Inputs: 
         - predmatrix_shortosc.csv
