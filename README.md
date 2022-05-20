@@ -31,6 +31,18 @@ List of files for Github:
         - sim3_run1.png = plot of each age class over time (first run only) after burn in. 
         - sim3_ycvsitself.png = plot of each year class vs. itself one time step previously
         - sim3_ycvsprevyr.png = plot of each year class vs. previous age class (same time step). 
+- mixedAgeloop.R does the analysis that compares hierarchical, mixed age and individual age models
+    - Inputs: 
+        - Simulation1_data.csv
+        - Simulation2_data.csv
+        - Simulation3_data.csv
+    - Outputs:
+        - mixedageout.csv
+- SimObsPredvis.R plots a hierarchical GP over simulated data for each simulation.
+   - Inputs: 
+        - Simulation1_data.csv
+        - Simulation2_data.csv
+        - Simulation3_data.csv
 
 
 ######## Previous structure ################
