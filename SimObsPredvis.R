@@ -370,8 +370,8 @@ p1.5res$age_class <-fct_relevel(p1.5res$age_class, "Age 1","Age 2","Age 3","Age 
  ### Remember to log transform the value ###
  p3 <-filter(preylist3, time_step >=300 & time_step <= 340)%>% as.data.frame()%>%mutate(value=log(value))
  
- p3Lags = makelags(data=p3, y="value", pop="age_class", E=bestE, tau=bestTau)
- #p3Lags = makelags(data=p3, y="value", pop="age_class", E=round(sqrt(30)), tau=1)
+ #p3Lags = makelags(data=p3, y="value", pop="age_class", E=bestE, tau=bestTau)
+ p3Lags = makelags(data=p3, y="value", pop="age_class", E=round(sqrt(30)), tau=1)
  p3 = cbind(p3,p3Lags)
  p3.train = filter(p3, time_step <= (max(p3$time_step)-10))
  p3.test = filter(p3, time_step > (max(p3$time_step)-10))
