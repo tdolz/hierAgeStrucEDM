@@ -19,6 +19,7 @@ library(Metrics)
 library(corrplot)
 library(pracma)
 library(parallel)
+library(grid)
 library(gridExtra)
 library(cowplot)
 
@@ -96,10 +97,10 @@ for (m in 1:maxiter){
     recnoise[m,5]<-sd(meanper$periodt)
     
     
-    #if(mean(meanper$periodt)<10) { #we can't get them all in there unfortunately. 
-    preylist[[m]] <- prey
-    # }else
-    #  preylist[[m]] <- NA
+    if(mean(meanper$periodt)<12) { #we can't get them all in there unfortunately. 
+      preylist[[m]] <- prey
+    }else
+      preylist[[m]] <- NA
     
   }, error=function(e){})
   
@@ -366,14 +367,13 @@ for (m in 1:maxiter){
     recnoise[m,6]<-sd(meanper$periodt)
     
     
-    #mean period governor
-    #if(mean(meanper$periodt)<10) { #we can't get them all in there unfortunately. 
-    #  preylist[[m]] <- prey
-    #}else
-    #  preylist[[m]] <- NA
+    if(mean(meanper$periodt)<12) { #we can't get them all in there unfortunately. 
+      preylist[[m]] <- prey
+    }else
+      preylist[[m]] <- NA
     
     #no governor
-    preylist[[m]] <- prey
+    #preylist[[m]] <- prey
     
   }, error=function(e){})
   
@@ -663,10 +663,10 @@ for (m in 1:maxiter){
     recnoise[m,6]<-sd(meanper$periodt)
     
     #governor
-    #if(mean(meanper$periodt) < 10){
-    preylist[[m]] <- prey
-    # }else
-    # preylist[[m]] <- NA
+    if(mean(meanper$periodt)<12) { #we can't get them all in there unfortunately. 
+      preylist[[m]] <- prey
+    }else
+      preylist[[m]] <- NA
     
     
   }, error=function(e){})
@@ -834,3 +834,4 @@ preylists <-preylists %>%
 write.csv(preylists,"Simulation3_data.csv")
 #write.csv(recnoises,"sim3_infoNEW.csv")
 write.csv(recnoises,"sim3_info.csv")
+

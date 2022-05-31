@@ -1,5 +1,5 @@
 ### Simulation data plotted over predictions##
-### 4/5/22
+### 4/5/22, updated 5/30/22
 library(dplyr)
 library(tidyverse)
 library(purrr)
@@ -85,13 +85,14 @@ bestET <-which(rmsematrix1==min(rmsematrix1,na.rm=T),arr.ind=T)
 bestE <-as.numeric(noquote(rownames(bestET)))
 bestTau <-as.numeric(bestET[2])
 
+#E=8, tau=1
 
 #########Make 30 year datasets + ten year test dataset to fit GPs###
 ### Remember to log transform the value ###
 p1 <-filter(preylist1, time_step >=300 & time_step <= 350)%>% as.data.frame()%>%mutate(value=log(value))
 
-#p1Lags = makelags(data=p1, y="value", pop="age_class", E=bestE, tau=bestTau)
-p1Lags = makelags(data=p1, y="value", pop="age_class", E=round(sqrt(30)), tau=1)
+p1Lags = makelags(data=p1, y="value", pop="age_class", E=bestE, tau=bestTau)
+#p1Lags = makelags(data=p1, y="value", pop="age_class", E=round(sqrt(30)), tau=1)
 p1 = cbind(p1,p1Lags)
 p1.train = filter(p1, time_step <= (max(p1$time_step)-20))
 p1.test = filter(p1, time_step > (max(p1$time_step)-20))
@@ -176,7 +177,8 @@ p1.5res$age_class <-fct_relevel(p1.5res$age_class, "Age 1","Age 2","Age 3","Age 
  facet_wrap(age_class~., scales="free_y")+
  theme_classic()
  #save
- ggsave("Sim1obspreds_age.png",height=6, width=8,dpi=300,  path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ #ggsave("Sim1obspreds_age.png",height=6, width=8,dpi=300,  path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ ggsave("Sim1obspreds_age.png",height=6, width=8,dpi=300)
  dev.off()
  
  p1.5res %>%
@@ -191,17 +193,52 @@ p1.5res$age_class <-fct_relevel(p1.5res$age_class, "Age 1","Age 2","Age 3","Age 
          facet_wrap(age_class~., scales="free")+
          theme_classic()
  #save
- ggsave("Sim1obspreds_agg.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ #ggsave("Sim1obspreds_agg.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ ggsave("Sim1obspreds_agg.png")
  dev.off()
  #using the total abundance index produces an identical fit which is super annoying. 
  #so maybe don't include it (the red)
 
  
 #### SIM 2 ###################################################################################################################
+ #find the best E and tau - 
+ pgrid <-as.data.frame(preylist2) %>%filter(age_class !="V21" & time_step >=300 & time_step < 330)
+ pgrid <-mutate(pgrid, value=log(value))
+ 
+ Ees <-seq(2,10,1)
+ taus <-seq(1,3,1)
+ var_pairs = expand.grid(Ees, taus) # Combinations of vars, 2 at a time
+ ETdf <-matrix(nrow=dim(var_pairs)[1],ncol=4)
+ ETdf[,1]<-var_pairs[,1]
+ ETdf[,2]<-var_pairs[,2]
+ r2matrix1 = array(NA, dim = c(length(Ees), length(taus)), dimnames = list(Ees,taus)) 
+ rmsematrix1 = array(NA, dim = c(length(Ees), length(taus)), dimnames = list(Ees,taus)) 
+ for (i in 1:nrow(var_pairs)) {
+   try({
+     fit1 <-fitGP(data = pgrid, y = "value", pop="age_class",scaling = "local", E=var_pairs[i,1], tau=var_pairs[i,2], predictmethod = "loo")
+     fit1_r2 <-fit1$outsampfitstats[[1]]
+     fit1_rmse <-fit1$outsampfitstats[[2]]
+     r2matrix1[var_pairs[i,1], var_pairs[i,2]] = fit1_r2
+     ETdf[i,3] <-fit1_r2
+     ETdf[i,4] <-fit1_rmse
+     rmsematrix1[var_pairs[i,1], var_pairs[i,2]] = fit1_rmse
+   },silent=F)
+ }
+ r2matrix2
+ rmsematrix2
+ #grab the position of the best E and tau from the matrix. 
+ bestET <-which(rmsematrix2==min(rmsematrix2,na.rm=T),arr.ind=T)
+ bestE <-as.numeric(noquote(rownames(bestET)))
+ bestTau <-as.numeric(bestET[2])
+ #previously best E=9 best tau=2
+ 
+ 
  #Make 30 year datasets + ten year test dataset to fit GPs#
  ### Remember to log transform the value ###
  p2 <-filter(preylist2, time_step >=300 & time_step <= 340, age_class != "V21")%>% as.data.frame()%>%mutate(value=log(value))
- p2Lags = makelags(data=p2, y="value", pop="age_class", E=round(sqrt(30)), tau=1)
+ 
+ p2Lags = makelags(data=p2, y="value", pop="age_class", E=bestE, tau=bestTau)
+ #p2Lags = makelags(data=p2, y="value", pop="age_class", E=round(sqrt(30)), tau=1)
  p2 = cbind(p2,p2Lags)
  p2.train = filter(p2, time_step <= (max(p2$time_step)-10))
  p2.test = filter(p2, time_step > (max(p2$time_step)-10))
@@ -274,7 +311,8 @@ p1.5res$age_class <-fct_relevel(p1.5res$age_class, "Age 1","Age 2","Age 3","Age 
          facet_wrap(age_class~., scales="free_y")+
          theme_classic()
  #save
- ggsave("Sim2obspreds_age.png",height=6, width=8,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ #ggsave("Sim2obspreds_age.png",height=6, width=8,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ ggsave("Sim2obspreds_age.png",height=6, width=8,dpi=300)
  dev.off()
  
  p2.5res %>%
@@ -290,15 +328,50 @@ p1.5res$age_class <-fct_relevel(p1.5res$age_class, "Age 1","Age 2","Age 3","Age 
          theme_classic()
  #save
  ggsave("Sim2obspreds_agg.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ ggsave("Sim2obspreds_agg.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
  dev.off()
  #using the total abundance index produces an identical fit which is super annoying. 
  #so maybe don't include it (the red)
  
  ### SIM 3 ###################################################################################################################
+ 
+ #find the best E and tau - 
+ pgrid <-as.data.frame(preylist3) %>%filter(age_class !="V21" & time_step >=300 & time_step < 330)
+ pgrid <-mutate(pgrid, value=log(value))
+ 
+ Ees <-seq(2,10,1)
+ taus <-seq(1,3,1)
+ var_pairs = expand.grid(Ees, taus) # Combinations of vars, 2 at a time
+ ETdf <-matrix(nrow=dim(var_pairs)[1],ncol=4)
+ ETdf[,1]<-var_pairs[,1]
+ ETdf[,2]<-var_pairs[,2]
+ r2matrix3 = array(NA, dim = c(length(Ees), length(taus)), dimnames = list(Ees,taus)) 
+ rmsematrix3 = array(NA, dim = c(length(Ees), length(taus)), dimnames = list(Ees,taus)) 
+ for (i in 1:nrow(var_pairs)) {
+   try({
+     fit1 <-fitGP(data = pgrid, y = "value", pop="age_class",scaling = "local", E=var_pairs[i,1], tau=var_pairs[i,2], predictmethod = "loo")
+     fit1_r2 <-fit1$outsampfitstats[[1]]
+     fit1_rmse <-fit1$outsampfitstats[[2]]
+     r2matrix3[var_pairs[i,1], var_pairs[i,2]] = fit1_r2
+     ETdf[i,3] <-fit1_r2
+     ETdf[i,4] <-fit1_rmse
+     rmsematrix3[var_pairs[i,1], var_pairs[i,2]] = fit1_rmse
+   },silent=F)
+ }
+ r2matrix3
+ rmsematrix3
+ #grab the position of the best E and tau from the matrix. 
+ bestET <-which(rmsematrix3==min(rmsematrix3,na.rm=T),arr.ind=T)
+ bestE <-as.numeric(noquote(rownames(bestET)))
+ bestTau <-as.numeric(bestET[2])
+ #previously best E=8 best tau=1
+ 
  #Make 30 year datasets + ten year test dataset to fit GPs#
  ### Remember to log transform the value ###
  p3 <-filter(preylist3, time_step >=300 & time_step <= 340)%>% as.data.frame()%>%mutate(value=log(value))
- p3Lags = makelags(data=p3, y="value", pop="age_class", E=round(sqrt(30)), tau=1)
+ 
+ p3Lags = makelags(data=p3, y="value", pop="age_class", E=bestE, tau=bestTau)
+ #p3Lags = makelags(data=p3, y="value", pop="age_class", E=round(sqrt(30)), tau=1)
  p3 = cbind(p3,p3Lags)
  p3.train = filter(p3, time_step <= (max(p3$time_step)-10))
  p3.test = filter(p3, time_step > (max(p3$time_step)-10))
@@ -370,7 +443,8 @@ p1.5res$age_class <-fct_relevel(p1.5res$age_class, "Age 1","Age 2","Age 3","Age 
          facet_wrap(age_class~., scales="free_y")+
          theme_classic()
  #save
- ggsave("Sim3obspreds_age.png", height= 6, width=8, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ ggsave("Sim3obspreds_age.png", height= 6, width=8, dpi=300)
+ #ggsave("Sim3obspreds_age.png", height= 6, width=8, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
  dev.off()
  
  p3.5res %>%
@@ -385,7 +459,8 @@ p1.5res$age_class <-fct_relevel(p1.5res$age_class, "Age 1","Age 2","Age 3","Age 
          facet_wrap(age_class~., scales="free")+
          theme_classic()
  #save
- ggsave("Sim3obspreds_agg.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ ggsave("Sim3obspreds_agg.png")
+ #ggsave("Sim3obspreds_agg.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
  dev.off()
  #using the total abundance index produces an identical fit which is super annoying. 
  #so maybe don't include it (the red)
@@ -415,7 +490,8 @@ aggres %>%
          geom_line(data=aggta,aes(x=time_step, y=predmean), color="red")+
          facet_wrap(Simulation~., scales="free")+
          theme_classic()
-ggsave("aggregatepreds20ages.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("aggregatepreds20ages.png")
+#ggsave("aggregatepreds20ages.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
 #################### Compare the different ages and years ##############
