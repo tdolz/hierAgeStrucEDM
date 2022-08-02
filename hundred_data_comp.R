@@ -9,6 +9,7 @@
 
 ############## YOU NEED TO RE RUN THIS AND RE-OUTPUT THE FIGURES BECAUSE TAU WAS WRONG ON THE 520 ##################
 ############## 4/2/22
+############## Fixed and re-run 8/2/2022
 
 
 #### 3/18/2022
@@ -51,7 +52,7 @@ GP100 <-function(plist){
  names(plist)<-c("time_step", "age_class","value")
  #create the Ntotal age class. 
  plistNT <-plist %>% group_by(time_step)%>%summarize(NewValue=sum(value))%>%mutate(age_class="all", value=log(NewValue))
- plist <-mutate(plist, value=log(value)) #REMEMBER TO TURN THIS ON AND OFF
+ plist <-mutate(plist, value=log(value)) #LOGGED
  plist <-plist %>%group_by(age_class)%>%arrange(age_class, time_step)#make sure it is sorted by age_class then year
  plist<-filter(plist, age_class !="V21") # we're not doing the plus group ever 
  
@@ -61,39 +62,38 @@ GP100 <-function(plist){
  #############Format the data##############
  #5 AGE CLASSES, 20 YEARS
  prey5 <-filter(plist, time_step >=300 & time_step <= 330 & age_class %in% agelist[1:5])%>% as.data.frame()
- prey5Lags = makelags(data=prey5, yd="value", pop="age_class", E=round(sqrt(20)), tau=1)
+ prey5Lags = makelags(data=prey5, y="value", pop="age_class", E=round(sqrt(20)), tau=1)
  prey5 = cbind(prey5,prey5Lags)
  prey5.train = filter(prey5, time_step <= (max(prey5$time_step)-10))
  prey5.test = filter(prey5, time_step > (max(prey5$time_step)-10))
  
  #4 AGE CLASSES, 25 YEARS 
  prey4 <-filter(plist, time_step >=300 & time_step <= 335 & age_class %in% agelist[1:4])%>% as.data.frame()
- prey4Lags = makelags(data=prey4, yd="value", pop="age_class", E=round(sqrt(25)), tau=1)
+ prey4Lags = makelags(data=prey4, y="value", pop="age_class", E=round(sqrt(25)), tau=1)
  prey4 = cbind(prey4,prey4Lags)
  prey4.train = filter(prey4, time_step <= (max(prey4$time_step)-10))
  prey4.test = filter(prey4, time_step > (max(prey4$time_step)-10))
  
  # 10 AGE CLASSES, 10 YEARS ##
  prey10 <-filter(plist, time_step >=300 & time_step <= 320 & age_class %in% agelist[1:10])%>% as.data.frame()
- prey10Lags = makelags(data=prey10, yd="value", pop="age_class", E=round(sqrt(10)), tau=1)
+ prey10Lags = makelags(data=prey10, y="value", pop="age_class", E=round(sqrt(10)), tau=1)
  prey10 = cbind(prey10,prey10Lags)
  prey10.train = filter(prey10, time_step <= (max(prey10$time_step)-10))
  prey10.test = filter(prey10, time_step > (max(prey10$time_step)-10))
  
  # 20 AGE CLASSES, 5 YEARS ##
  prey205 <- filter(plist, time_step >=300 & time_step <= 315 & age_class %in% agelist[1:20])%>% as.data.frame()
- prey205Lags = makelags(data=prey205, yd="value", pop="age_class", E=round(sqrt(5)), tau=1)
+ prey205Lags = makelags(data=prey205, y="value", pop="age_class", E=round(sqrt(5)), tau=1)
  prey205 = cbind(prey205,prey205Lags)
  prey205.train = filter(prey205, time_step <= (max(prey205$time_step)-10))
  prey205.test = filter(prey205, time_step > (max(prey205$time_step)-10))
  
- # N_TOTAL GROUP***** collected from 20 age classes over 100 years.
+ # N_TOTAL GROUP***** collected from 20 age classes over 100 years. - I don't understand why we need this 
  preyNT <-plistNT%>%filter(time_step >= 300 & time_step <= 410)%>% as.data.frame()
- preyNTLags = makelags(data=preyNT, yd="value", E=round(sqrt(100)), tau=1)
+ preyNTLags = makelags(data=preyNT, y="value", E=round(sqrt(100)), tau=1)
  preyNT = cbind(preyNT,preyNTLags)
  preyNT.train = filter(preyNT, time_step <= (max(preyNT$time_step)-10))
  preyNT.test = filter(preyNT, time_step > (max(preyNT$time_step)-10))
- 
  
  #100 time points for individual ages model - do not include the Ntotal age class. 
  preypivall <- plist %>%filter(time_step > 299 & time_step < 410 & age_class !="all") %>% mutate(age_class=as.factor(age_class))%>% as.data.frame()
@@ -101,13 +101,17 @@ GP100 <-function(plist){
  #######################################################################################################################################
  #######################################################################################################################################
  # 20 YEARS 5 AGES 
- prey520_final <-fitGP(data = prey5.train, yd = "value", xd=colnames(prey5Lags),datanew=prey5.test,pop="age_class",scaling = "local",predictmethod = "loo")
+ # hierarchical model
+ prey520_final <-fitGP(data = prey5.train, y = "value", x=colnames(prey5Lags),newdata=prey5.test,pop="age_class",scaling = "local",predictmethod = "loo")
  #Single age method
  preypivall520 <-filter(preypivall, age_class %in% c("V1","V2","V3","V4","V5"))%>%as.data.frame()
  prey520_ages <-indv_age(preypivall520)%>%mutate(model="prey520", tslength=100, approach="single_age")
  #aggregate the single age results "agg hier"
  prey520agg <-aggPred(preypivall520,20) # the aggregate r2 for 20 years. 
+ 
  #aggregate the hierarchical results "sum hier"
+ #first get the observed and predicted. unlog them, add them, then log them again. 
+ #not sure what this was about. 
  prey520sumhier <-full_join(prey520_final$outsampresults, prey520_final$insampresults, by=c("timestep","pop","obs"))%>%
   mutate(newpred=exp(predmean.x), newobs=exp(obs))%>% filter(!is.na(newpred))%>%
   group_by(timestep)%>%summarise(predmean=log(sum(newpred)), Obs=log(sum(newobs)))%>%mutate(model="prey520")
@@ -117,7 +121,7 @@ GP100 <-function(plist){
  prey520NTphis <-as.data.frame(t(prey520NTog[[2]]))%>%mutate(approach="TAindex",model="prey520")
  
  # 25 years of 4 age classes
- prey425_final <-fitGP(data = prey4.train, yd = "value", xd=colnames(prey4Lags),datanew=prey4.test,pop="age_class",scaling = "local",predictmethod = "loo")
+ prey425_final <-fitGP(data = prey4.train, y = "value", x=colnames(prey4Lags),newdata=prey4.test,pop="age_class",scaling = "local",predictmethod = "loo")
  #now each age class individually
  preypivall425 <-filter(preypivall, age_class %in% c("V1","V2","V3","V4"))%>%as.data.frame()
  prey425_ages <-indv_age(preypivall425)%>%mutate(model="prey425",tslength=100, approach="single_age")
@@ -131,7 +135,7 @@ GP100 <-function(plist){
  prey425NTphis <-as.data.frame(t(prey425NTog[[2]]))%>%mutate(approach="TAindex",model="prey425")
  
  # 10 years of 10 age classes
- prey1010_final <-fitGP(data = prey10.train, yd = "value", xd=colnames(prey10Lags),datanew=prey10.test,pop="age_class",scaling = "local",predictmethod = "loo")
+ prey1010_final <-fitGP(data = prey10.train, y = "value", x=colnames(prey10Lags),newdata=prey10.test,pop="age_class",scaling = "local",predictmethod = "loo")
  #now each age class individually
  preypivall1010 <-filter(preypivall, age_class %in% c("V1","V2","V3","V4","V5","V6","V7","V8","V9","V10"))%>%as.data.frame()
  prey1010_ages <-indv_age(preypivall1010)%>%mutate(model="prey1010",tslength=100, approach="single_age")
@@ -145,7 +149,7 @@ GP100 <-function(plist){
  prey1010NTphis <-as.data.frame(t(prey1010NTog[[2]]))%>%mutate(approach="TAindex",model="prey1010")
  
  # 5 years of 20 age classes
- prey205_final <-fitGP(data = prey205.train, yd = "value", xd=colnames(prey205Lags),datanew=prey205.test,pop="age_class",scaling = "local",predictmethod = "loo")
+ prey205_final <-fitGP(data = prey205.train, y = "value", x=colnames(prey205Lags),newdata=prey205.test,pop="age_class",scaling = "local",predictmethod = "loo")
  #now each age class individually
  preypivall205 <-filter(preypivall, age_class %in% c("V1","V2","V3","V4","V5","V6","V7","V8","V9","V10","V11","V12","V13","V14","V15","V16","V17","V18","V19","V20"))%>%as.data.frame()#all the age classes. 
  prey205_ages <-indv_age(preypivall205)%>%mutate(model="prey205",tslength=100, approach="single_age")
@@ -153,6 +157,7 @@ GP100 <-function(plist){
  prey205sumhier <-full_join(prey205_final$outsampresults, prey205_final$insampresults, by=c("timestep","pop","obs"))%>%
   mutate(newpred=exp(predmean.x), newobs=exp(obs))%>% filter(!is.na(newpred))%>%
   group_by(timestep)%>%summarise(predmean=log(sum(newpred)), Obs=log(sum(newobs)))%>%mutate(model="prey205")
+ 
  #Ntotal abundance, different years. 
  prey205NTog <-ntotal_app(prey205[,1:3]) 
  prey205NT <-as.data.frame(t(prey205NTog[[1]]))%>%mutate(approach="TAindex",model="prey205")
@@ -161,18 +166,18 @@ GP100 <-function(plist){
  
  #################################################################################################################################  
  ################################# Extract Fit stats ###############################################################################
+ #hierarchical models
  outsamp <-bind_rows(prey205_final$outsampfitstats,prey1010_final$outsampfitstats,prey520_final$outsampfitstats,prey425_final$outsampfitstats)
  names(outsamp) <-c("OOS_R2","OOS_rmse")
  insamp <-bind_rows(prey205_final$insampfitstats,prey1010_final$insampfitstats,prey520_final$insampfitstats,prey425_final$insampfitstats)
  rhos <-c(tail(prey205_final$pars,1),tail(prey1010_final$pars,1),tail(prey520_final$pars,1),tail(prey425_final$pars,1))
- 
  fitstats <-bind_cols(outsamp,insamp,rhos)%>%as.data.frame()
  rownames(fitstats) <-c("5yrs20ages","10yrs10ages","20yrs5ages","25yrs4ages")
  colnames(fitstats)[8]<-"rho"
  fitstats$tslength <-c(5,10,20,25)
  fitstats <- mutate(fitstats, approach="hier")
  
- #concatonate the sumhier results
+ #concatonate the sumhier results and get R2
  fitsumhier <-bind_rows(prey520sumhier,prey425sumhier,prey1010sumhier,prey205sumhier)%>%
   group_by(model)%>%summarize(OOS_R2=getR2(obs=Obs,pred=predmean))%>%mutate(approach="sumhier")%>%as.data.frame
  
@@ -199,8 +204,8 @@ GP100 <-function(plist){
  pars <-bind_rows(pars, phis)
  
  #outputs
- gplout <-list(pars,fitstats,fitstats_ages,fitsumhier)
- names(gplout) <-c("pars","fitstats","fitstats_ages","fitsumhier")
+ gplout <-list(pars,fitstats,fitstats_ages,fitsumhier,Ntotsyrs)
+ names(gplout) <-c("pars","fitstats","fitstats_ages","fitsumhier", "Ntotsyrs")
  gplout
 }
 
@@ -229,12 +234,12 @@ fitages <- mutate(fitages, models=ifelse(model=="prey205","5yrs20ages",ifelse(mo
  dplyr::select(-rowname)%>%dplyr::rename(age_class="age class")
 
 #aggfits#
-fitagg <-lapply(parafoo, `[`, "fitagg")
-for (i in 1:length(fitagg)){
- fitagg[[i]]<- mutate(fitagg[[i]]$fitagg, iter=i)%>%rownames_to_column()
-}
-fitagg <-fitagg %>% bind_rows()%>%as.data.frame()
-fitagg <-dplyr::select(fitagg,-rowname)%>% mutate(age_class="all",models=ifelse(model=="prey205","5yrs20ages",ifelse(model=="prey520","20yrs5ages",ifelse(model=="prey1010","10yrs10ages","25yrs4ages"))))
+#fitagg <-lapply(parafoo, `[`, "fitagg")
+#for (i in 1:length(fitagg)){
+ #fitagg[[i]]<- mutate(fitagg[[i]]$fitagg, iter=i)%>%rownames_to_column()
+#}
+#fitagg <-fitagg %>% bind_rows()%>%as.data.frame()
+#fitagg <-dplyr::select(fitagg,-rowname)%>% mutate(age_class="all",models=ifelse(model=="prey205","5yrs20ages",ifelse(model=="prey520","20yrs5ages",ifelse(model=="prey1010","10yrs10ages","25yrs4ages"))))
 
 #hierarchical sum fits#
 fitsumhier <-lapply(parafoo, `[`, "fitsumhier")
@@ -244,9 +249,17 @@ for (i in 1:length(fitsumhier)){
 fitsumhier <-fitsumhier %>% bind_rows()%>%as.data.frame()
 fitsumhier <-dplyr::select(fitsumhier,-rowname)%>% mutate(age_class="all",models=ifelse(model=="prey205","5yrs20ages",ifelse(model=="prey520","20yrs5ages",ifelse(model=="prey1010","10yrs10ages","25yrs4ages"))))
 
+ntotsfits <-lapply(parafoo,`[`, "Ntotsyrs")
+for (i in 1:length(ntotsfits)){
+  ntotsfits[[i]]<- mutate(ntotsfits[[i]]$Ntotsyrs, iter=i)%>%rownames_to_column()
+}
+ntotsfits <-ntotsfits %>% bind_rows()%>%as.data.frame()
+ntotsfits <-dplyr::select(ntotsfits,-rowname)%>% mutate(models=ifelse(model=="prey205","5yrs20ages",ifelse(model=="prey520","20yrs5ages",ifelse(model=="prey1010","10yrs10ages","25yrs4ages"))))
+
 
 #combine fitstats and fitages to newfits and return newfits#
-newfits <-bind_rows(fstats,fitages,fitagg,fitsumhier)
+newfits <-bind_rows(fstats,fitages,fitsumhier,ntotsfits)
+#newfits <-bind_rows(fstats,fitages,fitagg,fitsumhier)
 newfits
 }
 
@@ -262,6 +275,13 @@ numCores = detectCores()
 system.time(foo <-mclapply(shortlist, GP100, mc.cores=numCores))
 ### test the extract function
 process.test <-PROCESS100(foo)
+## test the hyperparameter extraction
+qpars <-lapply(foo, `[`, "pars")
+for (i in 1:length(qpars)){
+  qpars[[i]] <- mutate(qpars[[i]]$pars, iter=i)
+}
+qpars <-qpars %>% bind_rows()%>%as.data.frame()
+
 
 ######## Apply the GP100 function #########
 ## this takes a while, so we apply it in parallel.
@@ -271,7 +291,7 @@ system.time(parafoo <-mclapply(preylist1, GP100, mc.cores=numCores))
 #process hyperparameters#
 qpars <-lapply(parafoo, `[`, "pars")
 for (i in 1:length(qpars)){
- qpars[[i]] <- mutate(qpars[[i]]$pars, iter=i)%>%rownames_to_column()
+ qpars[[i]] <- mutate(qpars[[i]]$pars, iter=i)#%>%rownames_to_column()
 }
 qpars <-qpars %>% bind_rows()%>%as.data.frame()
 
@@ -292,7 +312,7 @@ system.time(parafoo <-mclapply(preylist2, GP100, mc.cores=numCores))
 #process hyperparameters#
 qpars <-lapply(parafoo, `[`, "pars")
 for (i in 1:length(qpars)){
- qpars[[i]] <- mutate(qpars[[i]]$pars, iter=i)%>%rownames_to_column()
+ qpars[[i]] <- mutate(qpars[[i]]$pars, iter=i)#%>%rownames_to_column()
 }
 qpars <-qpars %>% bind_rows()%>%as.data.frame()
 
@@ -313,7 +333,7 @@ system.time(parafoo <-mclapply(preylist3, GP100, mc.cores=numCores))
 #process hyperparameters#
 qpars <-lapply(parafoo, `[`, "pars")
 for (i in 1:length(qpars)){
- qpars[[i]] <- mutate(qpars[[i]]$pars, iter=i)%>%rownames_to_column()
+ qpars[[i]] <- mutate(qpars[[i]]$pars, iter=i)#%>%rownames_to_column()
 }
 qpars <-qpars %>% bind_rows()%>%as.data.frame()
 

@@ -663,7 +663,7 @@ for (m in 1:maxiter){
     recnoise[m,6]<-sd(meanper$periodt)
     
     #governor
-    if(mean(meanper$periodt)<12) { #we can't get them all in there unfortunately. 
+    if(mean(meanper$periodt)<8) { #we can't get them all in there unfortunately. 
       preylist[[m]] <- prey
     }else
       preylist[[m]] <- NA

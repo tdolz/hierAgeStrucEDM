@@ -10,11 +10,11 @@ indv_age <-function(df){
  fitstats <-list()
  for (m in 1:length(ages)){
   new_df <-filter(df, age_class==ages[m])
-  newdfLags = makelags(data=new_df, yd="value", E=maxE, tau=1)
+  newdfLags = makelags(data=new_df, y="value", E=maxE, tau=1)
   new_df = cbind(new_df,newdfLags)
   new_df.train = filter(new_df, time_step <= (max(new_df$time_step)-10))
   new_df.test = filter(new_df, time_step > (max(new_df$time_step)-10))
-  mod1 <-fitGP(data = new_df.train, yd = "value", xd=colnames(newdfLags),datanew=new_df.test,
+  mod1 <-fitGP(data = new_df.train, y = "value", x=colnames(newdfLags),newdata=new_df.test,
                pop="age_class",scaling = "global",predictmethod = "loo")
   mod1_out<-c(mod1$outsampfitstats, mod1$insampfitstats,as.character(ages[m]))
   names(mod1_out)<-c("OOS_R2","OOS_rmse","R2","rmse", "ln_post", "lnL_LOO","df","age class")
@@ -37,11 +37,11 @@ aggPred <-function(df,ts){
   mod1res <-list()
   for (m in 1:length(ages)){
     new_df <-filter(df, age_class==ages[m])
-    newdfLags = makelags(data=new_df, yd="value", E=maxE, tau=1)
+    newdfLags = makelags(data=new_df, y="value", E=maxE, tau=1)
     new_df = cbind(new_df,newdfLags)
     new_df.train = filter(new_df, time_step <= (max(new_df$time_step)-10))
     new_df.test = filter(new_df, time_step > (max(new_df$time_step)-10))
-    mod1 <-fitGP(data = new_df.train, yd = "value", xd=colnames(newdfLags),datanew=new_df.test,
+    mod1 <-fitGP(data = new_df.train, y = "value", x=colnames(newdfLags),newdata=new_df.test,
                  pop="age_class",scaling = "global",predictmethod = "loo")
     res <-as.data.frame(mod1$outsampresults)%>%mutate(age=ages[m])
     mod1res[[m]] <-res
@@ -67,11 +67,11 @@ ntotal_yrs <-function(df){
  for (m in 1:length(yrs)){
   new_df <-filter(df, time_step <= startime+yrs[m])
   maxE=round(sqrt(yrs[m]-10))
-  newdfLags = makelags(data=new_df, yd="value", E=maxE, tau=1)
+  newdfLags = makelags(data=new_df, y="value", E=maxE, tau=1)
   new_df = cbind(new_df,newdfLags)
   new_df.train = filter(new_df, time_step <= (max(new_df$time_step)-10))
   new_df.test = filter(new_df, time_step > (max(new_df$time_step)-10))
-  mod1 <-fitGP(data = new_df.train, yd = "value", xd=colnames(newdfLags),datanew=new_df.test,
+  mod1 <-fitGP(data = new_df.train, y = "value", x=colnames(newdfLags),newdata=new_df.test,
                pop="age_class",scaling = "local",predictmethod = "loo")
   mod1_out<-c(mod1$outsampfitstats, mod1$insampfitstats,as.character(yrs[m]))
   names(mod1_out)<-c("OOS_R2","OOS_rmse","R2","rmse", "ln_post", "lnL_LOO","df","tslength")
@@ -90,11 +90,11 @@ ntotal_app<-function(df){
  tslength <-(max(newdf$time_step)-min(newdf$time_step))-10
  maxE=round(sqrt(tslength))
  ages=n_distinct(df$age_class)
- newdfLags = makelags(data=newdf, yd="value", E=maxE, tau=1)
+ newdfLags = makelags(data=newdf, y="value", E=maxE, tau=1)
  new_df = cbind(newdf,newdfLags)
  new_df.train = filter(new_df, time_step <= (max(new_df$time_step)-10))
  new_df.test = filter(new_df, time_step > (max(new_df$time_step)-10))
- mod1 <-fitGP(data = new_df.train, yd = "value", xd=colnames(newdfLags),datanew=new_df.test,
+ mod1 <-fitGP(data = new_df.train, y = "value", x=colnames(newdfLags),newdata=new_df.test,
               scaling = "local",predictmethod = "loo")
  phis <-mod1$pars[substr(names(mod1$pars),1,3)=="phi"]
  mod1_out<-c(mod1$outsampfitstats, mod1$insampfitstats,tslength,ages)

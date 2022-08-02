@@ -4,17 +4,16 @@
 
 source("analysis_functions.R")
 #devtools::install_github("tanyalrogers/GPEDM")
-library(dplyr)
-library(tidyverse)
-library(purrr)
-library(ggplot2)
 library(rEDM)
 library(GPEDM)
 library(Metrics)
 library(corrplot)
 library(pracma)
 library(parallel)
-
+library(dplyr)
+library(tidyverse)
+library(purrr)
+library(ggplot2)
 
 
 
@@ -205,7 +204,7 @@ for (m in 1:maxiter){
  recnoise[m,5]<-sd(meanper$periodt)
  
  
- if(mean(meanper$periodt)<12) { #we can't get them all in there unfortunately. 
+ if(mean(meanper$periodt)<12) { #12#we can't get them all in there unfortunately. 
   preylist[[m]] <- prey
  }else
   preylist[[m]] <- NA
@@ -420,7 +419,7 @@ preylist.mean%>%
 ############# SIMULATION II New parameter values ################################
 ###########################################################################
 
-maxiter = 200. #try making 200 of them and deleting all the zero peak one.s 
+maxiter = 1000. #try making 200 of them and deleting all the zero peak one.s 
 preylist<-list()
 predlist<-list()
 count0peaks <-list()
@@ -551,7 +550,7 @@ for (m in 1:maxiter){
   #this is not a great option. 
   
   #mean period governor
-  if(mean(meanper$periodt)<10) { #we can't get them all in there unfortunately. 
+  if(mean(meanper$periodt)<11) { #we can't get them all in there unfortunately. 
     preylist[[m]] <- prey
   }else
     preylist[[m]] <- NA

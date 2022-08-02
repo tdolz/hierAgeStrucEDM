@@ -1,5 +1,8 @@
 ### Simulation data plotted over predictions##
 ### 4/5/22, updated 5/30/22
+### 
+### uptate 7/31/22 I fixed the simulation I version of this, the Tanya Figure, to add single age models to it.
+### but I think there is some issue with the error bars/ logging and unlogging the data and model outputs to get the right confidence intervals. 
 library(dplyr)
 library(tidyverse)
 library(purrr)
@@ -86,6 +89,8 @@ bestE <-as.numeric(noquote(rownames(bestET)))
 bestTau <-as.numeric(bestET[2])
 
 #E=8, tau=1
+bestE=8
+bestTau=1
 
 #########Make 30 year datasets + ten year test dataset to fit GPs###
 ### Remember to log transform the value ###
@@ -126,7 +131,6 @@ p1.5 <-mutate(p1, value=exp(value))%>%dplyr::select(time_step, age_class, value)
 #p1.5 <-mutate(p1.5, value=log(value))
 
 p1res <-full_join(p1.5,p1res)%>%select(-timestep)
-
 p1res <-bind_rows(sumtotal, p1res)%>%arrange(time_step, age_class)
 
 #in order to get data for the "value" column of p1res for the aggregate prediction, 
@@ -155,25 +159,58 @@ ta1res <-mutate(ta1gp$outsampresults, time_step=timestep+330)%>%dplyr::rename(ag
         mutate(predmean=exp(predmean))
 ta1res$age_class <-fct_recode(ta1res$age_class,"Aggregate"="aggregate")
 
-##REMEMBER TO LOG AND UNLOG
-#ta1res <-mutate(ta1res, ymin=log(ymin), ymax=log(ymax), predmean=log(predmean))
 
 #recode the age classes and organize for the graph. 
 p1.5res$age_class <-fct_recode(p1.5res$age_class, "Age 1"="V1", "Age 2"="V2", "Age 3"="V3", "Age 4"="V4",
-        "Age 5"="V5","Age 6"="V6","Age 7"="V7","Age 8"="V8","Age 9"="V9", "Age 10"="V10", "Age 11"="V11",
-        "Age 12" = "V12", "Age 13"="V13", "Age 14"= "V14","Age 15"="V15","Age 16"="V16","Age 17"="V17",
-        "Age 18"="V18", "Age 19"="V19","Age 20"="V20","Aggregate"="aggregate")
+                               "Age 5"="V5","Age 6"="V6","Age 7"="V7","Age 8"="V8","Age 9"="V9", "Age 10"="V10", "Age 11"="V11",
+                               "Age 12" = "V12", "Age 13"="V13", "Age 14"= "V14","Age 15"="V15","Age 16"="V16","Age 17"="V17",
+                               "Age 18"="V18", "Age 19"="V19","Age 20"="V20","Aggregate"="aggregate")
+
+
+#################fit a new GP to the total abundance dataset ONE AGE AT A TIME
+
+p1 <-filter(preylist1, time_step >=300 & time_step <= 350)%>% as.data.frame()%>%mutate(value=log(value))
+ages<-unique(p1$age_class)
+df_ages <-list()
+
+for (i in 1:length(ages)){
+  p1 <-filter(preylist1, time_step >=300 & time_step <= 350 & age_class==ages[i])%>% as.data.frame()%>%mutate(value=log(value))
+  p1Lags = makelags(data=p1, y="value",  E=bestE, tau=bestTau)
+  p1 = cbind(p1,p1Lags)
+  p1.train = filter(p1, time_step <= (max(p1$time_step)-20))
+  p1.test = filter(p1, time_step > (max(p1$time_step)-20))
+  p1gp <-fitGP(data = p1.train, y = "value", x=colnames(p1Lags),newdata=p1.test,scaling = "global",predictmethod = "loo")
+  sumtotal <-p1gp$outsampresults%>%
+    mutate(pred_mean=exp(predmean), OBS=exp(obs),Predfsd=exp(predfsd), Predsd=exp(predsd))%>% #unlogged
+    mutate(ymaxS=pred_mean+Predfsd, yminS=pred_mean-Predfsd)%>%
+    mutate(time_step=timestep+330, age_class=paste("Age", i))%>%select(-timestep)
+  df_ages[[i]]<-sumtotal
+}
+df_ages <-bind_rows(df_ages)
+
+
+##REMEMBER TO LOG AND UNLOG
+#ta1res <-mutate(ta1res, ymin=log(ymin), ymax=log(ymax), predmean=log(predmean))
+#
+#join to the single age predictions (df_ages)
+p1.5res <-select(df_ages, age_class, time_step, OBS, Predsd, Predfsd, ymaxS, yminS, pred_mean)%>%right_join(p1.5res)
+
 p1.5res$age_class <-fct_relevel(p1.5res$age_class, "Age 1","Age 2","Age 3","Age 4","Age 5","Age 6", "Age 7",
-                "Age 8","Age 9","Age 10","Age 11",'Age 12',"Age 13","Age 14","Age 15","Age 16","Age 17","Age 18",
-                "Age 19","Age 20","Aggregate")
+                                "Age 8","Age 9","Age 10","Age 11",'Age 12',"Age 13","Age 14","Age 15","Age 16","Age 17","Age 18",
+                                "Age 19","Age 20","Aggregate")
 
  p1.5res %>%
          filter(age_class !="Aggregate")%>%
  ggplot()+
          xlab("Time")+ylab("Abundance")+
+#observed data
  geom_point(aes(x=time_step, y=value), size=0.75)+ #value is raw observations
+#hierarchical model   
  geom_ribbon(aes(x=time_step,y=predmean,ymin=ymin,ymax=ymax),alpha=0.4,fill="blue") + #out of sample
- geom_line(aes(x=time_step, y=predmean), color="blue")+
+geom_line(aes(x=time_step, y=predmean), color="blue")+
+#single age model
+   #geom_ribbon(aes(x=time_step,y=pred_mean,ymin=yminS,ymax=ymaxS),alpha=0.4,fill="red") + #out of sample
+   #geom_line(aes(x=time_step, y=pred_mean), color="red")+
  facet_wrap(age_class~., scales="free_y")+
  theme_classic()
  #save
@@ -231,7 +268,8 @@ p1.5res$age_class <-fct_relevel(p1.5res$age_class, "Age 1","Age 2","Age 3","Age 
  bestE <-as.numeric(noquote(rownames(bestET)))
  bestTau <-as.numeric(bestET[2])
  #previously best E=9 best tau=2
- 
+ bestE=9
+ bestTau=2
  
  #Make 30 year datasets + ten year test dataset to fit GPs#
  ### Remember to log transform the value ###
@@ -365,6 +403,8 @@ p1.5res$age_class <-fct_relevel(p1.5res$age_class, "Age 1","Age 2","Age 3","Age 
  bestE <-as.numeric(noquote(rownames(bestET)))
  bestTau <-as.numeric(bestET[2])
  #previously best E=8 best tau=1
+ bestE=8
+ bestTau=1
  
  #Make 30 year datasets + ten year test dataset to fit GPs#
  ### Remember to log transform the value ###
@@ -486,12 +526,19 @@ aggres %>%
          xlab("Time")+ylab("Abundance")+
          geom_ribbon(aes(x=time_step,y=predmean,ymin=ymin,ymax=ymax),alpha=0.4,fill="blue") + #out of sample
          geom_line(aes(x=time_step, y=predmean), color="blue")+
-         geom_ribbon(data=aggta, aes(x=time_step,y=predmean,ymin=ymin,ymax=ymax),alpha=0.4,fill="red") + #out of sample
-         geom_line(data=aggta,aes(x=time_step, y=predmean), color="red")+
+         #geom_ribbon(data=aggta, aes(x=time_step,y=predmean,ymin=ymin,ymax=ymax),alpha=0.4,fill="red") + #out of sample
+         #geom_line(data=aggta,aes(x=time_step, y=predmean), color="red")+
          facet_wrap(Simulation~., scales="free")+
          theme_classic()
-ggsave("aggregatepreds20ages.png")
+ggsave("aggregatepreds20ages.png", height=4, width=8)
 #ggsave("aggregatepreds20ages.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
 #################### Compare the different ages and years ##############
+# I think you will have to individually model total abundance for each year. 
+
+
+
+p1.5resag <-mutate(p1.5res, Simulation ="I")
+p2.5resag <-mutate(p2.5res, Simulation ="II")
+p3.5resag <-mutate(p3.5res, Simulation ="III")
