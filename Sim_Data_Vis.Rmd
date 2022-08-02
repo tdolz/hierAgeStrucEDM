@@ -73,7 +73,7 @@ ggplot(pivphimean, aes(name,model))+
 ggsave("phiplot.png")
 dev.off()
 ```
-
+WIPWIPWIWPWIPWIPWIPWIPWIPWIP
 **pivot**
 ```{r}
 newfits <-bind_rows(fits1,fits2,fits3)%>%dplyr::select(-X)
@@ -85,17 +85,19 @@ newfits <-mutate(newfits, tslength=ifelse(!is.na(tslength),tslength,substr(model
 #pivot
 nfitspiv <-pivot_longer(newfits, 2:9, names_to = "stat")%>%as.data.frame()%>%mutate(model=as.character(model), sim=as.factor(sim))%>%
   mutate(maxE=round(sqrt(as.numeric(tslength))))
+
+#Need to clear this one up... 
+fig2filt <-filter(nfitspiv,stat=="OOS_R2", approach %in% c("TAindex","hier"), model !="preyNT")%>%mutate(tslength=as.factor(tslength))
+fig2filt$tslength <-fct_relevel(fig2filt$tslength,c("5","10","20","25"))
+
 ```
 
 **Boxplot1: Figure total abundance single index to overall estimates from hierarchical models**
 under "approach", "sumhier" is the sum total abundance of the hierarchcial models. 
-LATER we found that we do not want to compare the summed total abundance estimates to total abundance, but we want to compare overall r-squared to total abundance. 
+LATER we found that we do not want to compare the summed total abundance estimates to total abundance, but we want to compare overall r-squared to total abundance. So is that "hier"
 
 ```{r}
 ## FITSTATS BOXPLOTS ##
-fig2filt <-filter(nfitspiv,stat=="OOS_R2", approach %in% c("TAindex","sumhier"), model !="preyNT")%>%mutate(tslength=as.factor(tslength))
-fig2filt$tslength <-fct_relevel(fig2filt$tslength,c("5","10","20","25"))
-
 fig2filt%>%
   #filter(sim=="III")%>%
   filter(tslength !="100")%>%
@@ -118,11 +120,10 @@ fig2filt%>%
 **Boxplot1: but as a facet plot**
 Boxplot of age structured model next to Ntotal model. 
 ```{r}
-apocolr =c("TAindex"="#b2df8a","sumhier"="#1f78b4")
+apocolr =c("TAindex"="#b2df8a","hier"="#1f78b4")
 
 fig2filt%>%
   arrange(tslength)%>%
-  #filter(tslength ==5)%>%
   ggplot(aes(approach, value, fill=approach))+
   geom_point(aes(y = value, color = approach), 
               #position = position_jitter(width = 0.15), size = 1, alpha = 0.2) +
@@ -155,7 +156,7 @@ Boxplot of age structured model next to Ntotal model.
 mods1 <-c("prey1010","prey205","prey425","prey520")
 tslength<-c(5,10,20,25)
 
-apocolr =c("TAindex"="#b2df8a","sumhier"="#1f78b4")
+apocolr =c("TAindex"="#b2df8a","hier"="#1f78b4")
 
 plotlist <-list()
 jlist <-list()
