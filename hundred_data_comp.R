@@ -49,12 +49,12 @@ GP100 <-function(plist){
  
  #inputs
  plist<-as.data.frame(plist)
+ plist<-filter(plist, age_class !="V21") # we're not doing the plus group ever 
  names(plist)<-c("time_step", "age_class","value")
  #create the Ntotal age class. 
  plistNT <-plist %>% group_by(time_step)%>%summarize(NewValue=sum(value))%>%mutate(age_class="all", value=log(NewValue))
  plist <-mutate(plist, value=log(value)) #LOGGED
  plist <-plist %>%group_by(age_class)%>%arrange(age_class, time_step)#make sure it is sorted by age_class then year
- plist<-filter(plist, age_class !="V21") # we're not doing the plus group ever 
  
  agelist <-unique(plist$age_class)
  agelist <-agelist[c(1,12,14,15,16,17,18,19,20,2,3,4,5,6,7,8,9,10,11,13)]
