@@ -33,6 +33,7 @@ phi_Sim3 <-read.csv("Sim3Phis_100data.csv", header=T)%>%mutate(sim="III")
 fits1<-read.csv("Sim1fitstats_100data.csv", header=T)%>%mutate(sim="I")
 fits2<-read.csv("Sim2fitstats_100data.csv", header=T)%>%mutate(sim="II")
 fits3 <-read.csv("Sim3fitstats_100data.csv", header=T)%>%mutate(sim="III")
+points30 <-read.csv("thirtypoints.csv, header=T")
 ```
 
 
@@ -284,7 +285,7 @@ fig4filt%>%
 **Boxplot 2: 100 data points test**
 hierarchical models of 100 data points. 
 ```{r}
-fig3filt <-filter(nfitspiv,stat=="OOS_R2", approach %in% c("TAindex","sumhier"), 
+fig3filt <-filter(nfitspiv,stat=="OOS_R2", approach %in% c("TAindex","hier"), 
                   model %in% c("preyNT","prey205","prey1010","prey520","prey425"),
                   age_class =="all")%>% 
   mutate(tslength=as.factor(tslength))
@@ -317,8 +318,8 @@ fig3filt%>%
   panel.border = element_rect(colour="black",fill=NA, size=0.3))
 
 
-#ggsave("ntotallengthsno6.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-#dev.off()
+ggsave("ntotallengthsno6.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+dev.off()
 ```
 
 
