@@ -23,6 +23,7 @@ library(cowplot)
 library(grid)
 library(gridExtra)
 library(ggrepel)
+library(ggbreak)
 ```
 
 **import the data**
@@ -34,6 +35,7 @@ fits1<-read.csv("Sim1fitstats_100data.csv", header=T)%>%mutate(sim="I")
 fits2<-read.csv("Sim2fitstats_100data.csv", header=T)%>%mutate(sim="II")
 fits3 <-read.csv("Sim3fitstats_100data.csv", header=T)%>%mutate(sim="III")
 points30 <-read.csv("thirtypoints.csv", header=T)
+points15 <-read.csv("fifteenpoints.csv", header=T)
 ```
 
 **thirty points comparison figure**  
@@ -42,9 +44,18 @@ debated whether to go with R-squared or RMSE and ultimately settled on R-squared
 https://www.statology.org/rmse-vs-r-squared/ 
 
 ```{r}
+#points30 <-points15 #if you want to look at 15 points really quickly. 
+
+apocolr =c("Total Abundance"="#b2df8a","Hierarchical"="#1f78b4") 
+
+points30$approach <-fct_recode(points30$approach, "Total Abundance"="fit_NT_stats","Hierarchical"="fitsumStats")
+#if you want to change to hierarchical all instead of hierarchical summed
+#points30$approach <-fct_recode(points30$approach, "Total Abundance"="fit_NT_stats","Hierarchical"="fit_all_Stats")
+
+
 points30%>%
-  filter(rowname=="rmse")%>%
-  filter(approach !="fit_all_stats")%>%
+  filter(rowname=="R2")%>%
+  #filter(approach !="fitsumStats")%>%
   ggplot(aes(approach, value, fill=approach))+
   geom_point(aes(y = value, color =approach), 
                position = position_jitterdodge(), 
@@ -52,7 +63,7 @@ points30%>%
    geom_boxplot(outlier.shape = NA, alpha = 0.8,
                 position=position_dodge2(padding=0.5)) + 
  #scale_fill_manual(values = apocolr)+
-  #scale_color_manual(values = apocolr)+
+ # scale_color_manual(values = apocolr)+
  ylab("Out-of-sample r-squared")+xlab("Approach")+
  facet_wrap(~sim, scales="free",ncol=3)+
  guides(fill=guide_legend(title="Analysis"), color=guide_legend(title="Analysis"))+
@@ -74,12 +85,129 @@ points30%>%
 
 #ggsave("thirtypointsfig.png",path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 #dev.off()
-
-
-
-
 ```
+If we add them all up (fitsumStats) it's not better than total abundance. 
 
+
+**Thirty points figure plotted separately and reassembled in InDesign**  
+with ggbreak for axis breaks  
+https://cran.r-project.org/web/packages/ggbreak/vignettes/ggbreak.html#feature-12-compatible-with-patchwork 
+```{r}
+# there is probably a way to do scale-break with facets but I am just going to do it manually for now. 
+apocolr =c("TA"="#b2df8a","Hier"="#1f78b4") 
+
+points30$approach <-fct_recode(points30$approach, "TA"="Total Abundance","Hier"="Hierarchical")
+
+# 
+# 
+### I
+points30%>%
+  filter(rowname=="R2")%>%
+  #filter(approach !="fitsumStats")%>%
+  filter(approach !="fit_all_stats")%>%
+  filter(sim=="I")%>%
+  ggplot(aes(approach, value, fill=approach))+
+  geom_point(aes(y = value, color =approach), 
+               position = position_jitterdodge(), 
+             size = 1, alpha = 0.8) +
+   geom_boxplot(width=0.3, outlier.shape = NA, alpha = 0.8,
+                position=position_dodge2(padding=0.5)) + 
+ scale_fill_manual(values = apocolr)+
+  scale_color_manual(values = apocolr)+
+ ylab("")+xlab("")+
+ #facet_wrap(~sim, scales="free",ncol=3)+
+ #guides(fill=guide_legend(title="Analysis"), color=guide_legend(title="Analysis"))+
+ theme(
+  axis.text.x = element_text(size=16),
+  axis.text.y = element_text(size=16),
+  axis.title.x=element_text(size=16,face="bold",margin=margin(t=8,unit="pt")),
+  axis.title.y=element_text(size=16,face="bold",margin=margin(r=8,unit="pt")),
+  strip.text = element_text(size=16),
+  legend.key = element_rect(fill = "transparent"),
+  legend.text= element_text(size=16),
+  legend.title=element_text(size=16, face="bold"),
+  legend.position = "none",
+  strip.background =element_rect(fill="white"),
+  panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill = "transparent",colour = "dark grey"),
+  plot.background = element_rect(fill = "white",colour = "white", size=0.5),
+  panel.border = element_rect(colour="black",fill=NA, size=0.3))
+ggsave("thirtypointsfigI.png",height=6, width=4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+
+### II
+points30%>%
+  filter(rowname=="R2")%>%
+  #filter(approach !="fitsumStats")%>%
+  filter(approach !="fit_all_stats")%>%
+  filter(sim=="II")%>%
+  ggplot(aes(approach, value, fill=approach))+
+  geom_point(aes(y = value, color =approach), 
+               position = position_jitterdodge(), 
+             size = 1, alpha = 0.8) +
+   geom_boxplot(width=0.3, outlier.shape = NA, alpha = 0.8,
+                position=position_dodge2(padding=0.5)) + 
+ scale_fill_manual(values = apocolr)+
+  scale_color_manual(values = apocolr)+
+  #scale_y_break(c(0.5,0.7), scales=5)+
+  scale_y_break(c(0.8,0.925), scales=2)+
+ ylab("")+xlab("")+
+ #facet_wrap(~sim, scales="free",ncol=3)+
+ #guides(fill=guide_legend(title="Analysis"), color=guide_legend(title="Analysis"))+
+ theme(
+  axis.text.x = element_text(size=16),
+  axis.text.y = element_text(size=16),
+  axis.title.x=element_text(size=16,face="bold",margin=margin(t=8,unit="pt")),
+  axis.title.y=element_text(size=16,face="bold",margin=margin(r=8,unit="pt")),
+  strip.text = element_text(size=16),
+  legend.key = element_rect(fill = "transparent"),
+  legend.text= element_text(size=16),
+  legend.title=element_text(size=16, face="bold"),
+  legend.position = "none",
+  strip.background =element_rect(fill="white"),
+  panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill = "transparent",colour = "dark grey"),
+  plot.background = element_rect(fill = "white",colour = "white", size=0.5),
+  panel.border = element_rect(colour="black",fill=NA, size=0.3))
+ggsave("thirtypointsfigII.png",height=6, width=4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+
+### III
+points30%>%
+  filter(rowname=="R2")%>%
+  filter(approach !="fit_all_stats")%>%
+  #filter(approach !="fitsumStats")%>%
+  filter(sim=="III")%>%
+  ggplot(aes(approach, value, fill=approach))+
+  geom_point(aes(y = value, color =approach), 
+               position = position_jitterdodge(), 
+             size = 1, alpha = 0.8) +
+   geom_boxplot(width=0.3, outlier.shape = NA, alpha = 0.8,
+                position=position_dodge2(padding=0.5)) + 
+ scale_fill_manual(values = apocolr)+
+  scale_color_manual(values = apocolr)+
+  #scale_y_break(c(0.94,0.96), scales=2)+
+  scale_y_break(c(0.36,0.92), scales=5)+
+ ylab("")+xlab("")+
+ #facet_wrap(~sim, scales="free",ncol=3)+
+ #guides(fill=guide_legend(title="Analysis"), color=guide_legend(title="Analysis"))+
+ theme(
+  axis.text.x = element_text(size=16),
+  axis.text.y = element_text(size=16),
+  axis.title.x=element_text(size=16,face="bold",margin=margin(t=8,unit="pt")),
+  axis.title.y=element_text(size=16,face="bold",margin=margin(r=8,unit="pt")),
+  strip.text = element_text(size=16),
+  legend.key = element_rect(fill = "transparent"),
+  legend.text= element_text(size=16),
+  legend.title=element_text(size=16, face="bold"),
+  legend.position = "none",
+  strip.background =element_rect(fill="white"),
+  panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill = "transparent",colour = "dark grey"),
+  plot.background = element_rect(fill = "white",colour = "white", size=0.5),
+  panel.border = element_rect(colour="black",fill=NA, size=0.3))
+ggsave("thirtypointsfigIII.png",height=6, width=4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+```
+We notice that when you use the fitsumStats (where the obs and pred are added up from each model) total abundance is BETTER than not. Whereas if you use the overall R2 (direct from package) Total abundance is slightly less good or basically equivalent. 
 
 **Tileplot of ARD values for hyperparameters**
 ```{r}
