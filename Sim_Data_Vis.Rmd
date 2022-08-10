@@ -35,7 +35,7 @@ fits1<-read.csv("Sim1fitstats_100data.csv", header=T)%>%mutate(sim="I")
 fits2<-read.csv("Sim2fitstats_100data.csv", header=T)%>%mutate(sim="II")
 fits3 <-read.csv("Sim3fitstats_100data.csv", header=T)%>%mutate(sim="III")
 points30 <-read.csv("thirtypoints.csv", header=T)
-points15 <-read.csv("fifteenpoints.csv", header=T)
+#points15 <-read.csv("fifteenpoints.csv", header=T)
 ```
 
 **thirty points comparison figure**  
@@ -132,7 +132,7 @@ points30%>%
   panel.background = element_rect(fill = "transparent",colour = "dark grey"),
   plot.background = element_rect(fill = "white",colour = "white", size=0.5),
   panel.border = element_rect(colour="black",fill=NA, size=0.3))
-ggsave("thirtypointsfigI.png",height=6, width=4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("thirtypointsfigI.png",height=6, width=4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 
 ### II
 points30%>%
@@ -169,7 +169,7 @@ points30%>%
   panel.background = element_rect(fill = "transparent",colour = "dark grey"),
   plot.background = element_rect(fill = "white",colour = "white", size=0.5),
   panel.border = element_rect(colour="black",fill=NA, size=0.3))
-ggsave("thirtypointsfigII.png",height=6, width=4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("thirtypointsfigII.png",height=6, width=4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 
 ### III
 points30%>%
@@ -205,7 +205,7 @@ points30%>%
   panel.background = element_rect(fill = "transparent",colour = "dark grey"),
   plot.background = element_rect(fill = "white",colour = "white", size=0.5),
   panel.border = element_rect(colour="black",fill=NA, size=0.3))
-ggsave("thirtypointsfigIII.png",height=6, width=4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("thirtypointsfigIII.png",height=6, width=4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 ```
 We notice that when you use the fitsumStats (where the obs and pred are added up from each model) total abundance is BETTER than not. Whereas if you use the overall R2 (direct from package) Total abundance is slightly less good or basically equivalent. 
 
@@ -243,8 +243,8 @@ ggplot(pivphimean, aes(name,model))+
        panel.grid.major = element_blank(), 
        panel.grid.minor = element_blank())
 #ggsave("phiplot.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-ggsave("phiplot.png")
-dev.off()
+#ggsave("phiplot.png")
+#dev.off()
 ```
 **The different approaches**  
 hier = normal hierarchical GP fit. The age classes and time series length are what you would expect based on the "models" column.  
@@ -357,11 +357,8 @@ x.grob <- textGrob("",
 mainplot <-plot_grid(plotlist1,plotlist2,plotlist3, nrow = 3)
 grid.arrange(arrangeGrob(mainplot, left = y.grob, top = x.grob,padding = unit(20, "line")))
 
-#ggsave("cplotattempt.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-#ggsave("cplotattempt2.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-#ggsave("cplotattempt3.png", height=10, width=10, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-#ggsave("cplotattempt4.png", height=10, width=10, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-ggsave("cplotattempt4sumhier.png", height=12, width=10, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+
+#ggsave("cplotattempt4sumhier.png", height=12, width=10, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 #dev.off()
 ```
 
@@ -399,7 +396,7 @@ fig2filt%>%
   plot.background = element_rect(fill = "white",colour = "white", size=0.5),
   panel.border = element_rect(colour="black",fill=NA, size=0.3))
 
-ggsave("ntotallengthsTanya2.png",path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("ntotallengthsTanya2.png",path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 #dev.off()
 
 
@@ -457,7 +454,7 @@ fig4filt%>%
 **Boxplot 2: 100 data points test**
 hierarchical models of 100 data points. 
 ```{r}
-fig3filt <-filter(nfitspiv,stat=="OOS_rmse", approach %in% c("TAindex","hier"), 
+fig3filt <-filter(nfitspiv,stat=="OOS_R2", approach %in% c("TAindex","hier"), 
                   model %in% c("preyNT","prey205","prey1010","prey520","prey425"),
                   age_class =="all")%>% 
   mutate(tslength=as.factor(tslength))
@@ -490,12 +487,9 @@ fig3filt%>%
   panel.border = element_rect(colour="black",fill=NA, size=0.3))
 
 
-ggsave("ntotallengthsno6.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-dev.off()
+#ggsave("ntotallengthsno6.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#dev.off()
 ```
-
-
-
 
 
 **summary dynamic correlation**
@@ -521,7 +515,7 @@ nfitspiv %>%
  ggplot(aes(models,value, fill=models))+
  geom_boxplot(notch=T, notchwidth = 0.8)+
  xlab("model")+ylab("mean dynamic rho")+
- scale_fill_manual(values=simcols3)+
+ #scale_fill_manual(values=simcols3)+
  facet_wrap(~sim)+
  theme(
   axis.text.x = element_text(size=9, angle=90),
@@ -559,12 +553,9 @@ emp$modeltype=fct_recode(emp$modeltype, "Hier"="Hier", "IndvAge"="indvAge","Mixe
 emp2 <-dplyr::select(emp, age, OOS_R2,OOS_rmse, modeltype, species)%>%dplyr::rename(model=modeltype)
 
 #read in simulated data - all are logged
-mx1spp <-read.csv("mixedtest301spp.csv", header=T)%>%mutate(species="I")
-mx2sppMED <-read.csv("mixedtest302sppMED.csv", header=T)%>%mutate(species="II")
-mx2sppXXL <-read.csv("mixedtest302sppXXL.csv", header=T)%>%mutate(species="III")
+mixsim <-read.csv("mixedageoutnew.csv", header=T)
 
 #format the data
-mixsim <-bind_rows(mx1spp,mx2sppMED,mx2sppXXL)
 mixsimsum <-mixsim %>% group_by(species,model,age)%>%
   summarize(OOSR2=mean(OOS_R2),sdOOSR2=sd(OOS_R2),OOSrmse=mean(OOS_R2),sdOOSrmse=sd(OOS_rmse),.groups="drop")%>%dplyr::rename(OOS_R2=OOSR2, OOS_rmse=OOSrmse)
 mixsimsum$model <-fct_recode(mixsimsum$model,"Hier"="Hier","IndvAge"="IndvAge","MixedAge"="Mixed","Hier"="modHier","NTotal"="modNT")

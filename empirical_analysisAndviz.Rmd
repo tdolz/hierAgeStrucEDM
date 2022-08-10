@@ -1,6 +1,17 @@
-#### Empirical Data analysis and visualization####
-#### 3/24/22 #######
+---
+title: "empirical_analysisAndviz"
+author: "tara"
+date: "8/9/2022"
+output: html_document
+---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+#converting the Empirical analysis and visualization script into markdown, because it is easier to look at. That script was created 3/24/22 and was based off an earlier script called RealDataGp. This replaces both of those. 
+
+```{r}
 #install.packages("devtools") #if required
 devtools::install_github("tanyalrogers/GPEDM") #update frequently
 library(dplyr)
@@ -13,18 +24,18 @@ library(Metrics)
 library(kableExtra)
 library(corrplot)
 source("analysis_functions.R")
+```
 
+### STRIPED BASS ###
 
-############################### STRIPED BASS ############################################################
-
-#Import data
+**Import data: STRIPED BASS**  
+```{r}
 CTAAA <- read.csv("CTtrawlabundanceage19872017.csv", header = TRUE)
 CTAAA <-CTAAA[,2:16] #we are getting rid of the 15+ category
+```
 
-
-######### Multiply data by biomass or numbers at age#########
-##############################################################################################################
-
+**Optional Chunk: Multiply data by biomass or numbers at age**  
+```{r}
 ### import the data from CTLISTS
 CTLISTSraw <-read.csv("SB_dataming.csv", header=T)
 CTLISTS <-filter(CTLISTSraw, Year > 1986 & Year < 2018) #filter dataset to 1987-2017
@@ -46,32 +57,35 @@ pivSB$age <- fct_recode(pivSB$age_class,"age 1"="X1","age 2"="X2","age 3"="X3","
 #I tried numbers at age and weight at age, and weight at age produces better predictions than both numbers at age or not doing anything ###
 CTAAA <-dplyr::select(pivSB, Year, WeightAtAge,age_class)%>%
  pivot_wider(id_cols="Year", names_from = "age_class", values_from = "WeightAtAge")
+```
 
-##############################################################################################################
-############**if just using the proportional index, skip the block above and start back here**###############
-
+**if just using the proportional index, skip the block above and start back here**  
+```{r}
 pivSB <-pivot_longer(CTAAA,cols=2:15, names_to="age_class",values_to = "value")%>%
  mutate(age_class=as.factor(age_class))%>%as.data.frame()%>%mutate(age_class = fct_relevel(age_class, c("X1","X2","X3","X4","X5","X6","X7","X8","X9","X10","X11","X12","X13","X14")))%>%filter(age_class !="X15.")
 pivSB$age <- fct_recode(pivSB$age_class,"age 1"="X1","age 2"="X2","age 3"="X3","age 4"="X4","age 5"="X5","age 6" ="X6","age 7"="X7","age 8" ="X8","age 9"="X9","age 10"="X10","age 11"="X11","age 12"="X12","age 13"="X13","age 14"="X14")
 #create an abundance index from all age classes 
 SB_Ntotal <-mutate(CTAAA, N_total=X1+X2+X3+X4+X5+X5+X6+X7+X8+X9+X10+X11+X12+X13+X14, age_class="N_total")%>%dplyr::select(Year, N_total, age_class)%>%as.data.frame()
+```
 
+**Plot time series of age classes: Striped Bass**  
+```{r}
 ###plot by year
 pivSB%>% filter(age_class != "X15.")%>% ggplot(aes(Year,value))+
  geom_line()+ facet_wrap(~age, scales="free")+ theme_classic()
-ggsave("SB_rawData.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-dev.off()
-##############################################################################################################################
+#ggsave("SB_rawData.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#dev.off()
+```
+**DECIDE WHETHER TO LOG THE DATA**  
+skip this chunk if you are not logging. I think we will NOT log the data because of the +1 issue. 
+```{r, eval=FALSE}
+pivSB <-mutate(pivSB, value=log(value+1))
+SB_Ntotal <-mutate(SB_Ntotal, N_total=log(N_total+1))
+```
 
-
-###################### DECIDE WHETHER TO LOG THE DATA ##################
-#pivSB <-mutate(pivSB, value=log(value+1))
-#SB_Ntotal <-mutate(SB_Ntotal, N_total=log(N_total+1))
-#########################################################################
-
-
-#### SB: Lagged correlation plot########################################################################################
-#### Unfortunately, corrplot doesn't work with ggsave, so you must manually save the resulting image ###
+**Lagged Correlation plot: Striped bass**  
+corrplot doesn't work with ggsave, so you must manually save the resulting image.  
+```{r}
 blockSB <-CTAAA[1:15]
 
 #We are really only interested in 1987-end
@@ -88,11 +102,13 @@ M2 =data.frame(corlist, dist=M[corlist])
 length(M2$dist) == length(unique(M2$dist))
 mean(M2$dist)
 sd(M2$dist)
-#############################################################################################################################
+```
 
-####################################### SB FITS ACROSS A GRID OF E and TAU #################################################
-##### this is so we can decide the best E and Tau to use. We can use R-squared or RMSE as the metric to choose. 
 
+**SB FITS ACROSS A GRID OF E and TAU**  
+this is so we can decide the best E and Tau to use. We can use R-squared or RMSE as the metric to choose.  
+Do not run every time. 
+```{r}
 #loop to try hierarchical GPs on every combination of E and tau. 
 Ees <-seq(2,10,1)
 taus <-seq(1,3,1)
@@ -162,20 +178,46 @@ ETdf %>%
        panel.grid.minor = element_blank())
 ggsave("RMSE_ETSBbiom.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
-############################################################################################################################
-# Decided that the best E = 9 and the best tau = 1. 
+```
+Decided that the best E = 9 and the best tau = 1. 
 
-#########################################FIT SB MODELS#######################################################################
+**FIT SB MODELS and extract fitstats**  
+```{r}
 maxE <-9
 
 #NTOTAL
 #manually globally scaled data
-SB_Ntotal_final <-fitGP(data = SB_Ntotal, yd = "N_total", pop="age_class",scaling = "local", E=maxE, tau=1, predictmethod = "loo")
+SB_Ntotal_final <-fitGP(data = SB_Ntotal, y = "N_total", pop="age_class",scaling = "local", E=maxE, tau=1, predictmethod = "loo")
 
 #age structure
-SBage_final <-fitGP(data = pivSB, yd = "value", pop="age_class",scaling = "local", E=maxE, tau=1, predictmethod = "loo")
+SBage_final <-fitGP(data = pivSB, y = "value", pop="age_class",scaling = "local", E=maxE, tau=1, predictmethod = "loo")
 
 #*Individual age GP for SB**
+#*
+#*
+#*
+pivSB <-rename(pivSB, time_step=Year) 
+indv_age <-function(df){
+ ages <-unique(df$age_class)
+ maxE <-10 # in all cases it's going to be 10 because the ts is always 100 points long for this one. 
+ fitstats <-list()
+ for (m in 1:length(ages)){
+  new_df <-filter(df, age_class==ages[m])
+  newdfLags = makelags(data=new_df, y="value", E=maxE, tau=1)
+  new_df = cbind(new_df,newdfLags)
+  new_df.train = filter(new_df, time_step <= (max(new_df$time_step)-10))
+  new_df.test = filter(new_df, time_step > (max(new_df$time_step)-10))
+  mod1 <-fitGP(data = new_df.train, y = "value", x=colnames(newdfLags),newdata=new_df.test,
+               pop="age_class",scaling = "global",predictmethod = "loo")
+  mod1_out<-c(mod1$outsampfitstats, mod1$insampfitstats,as.character(ages[m]))
+  names(mod1_out)<-c("OOS_R2","OOS_rmse","R2","rmse", "ln_post", "lnL_LOO","df","age class")
+  fitstats[[m]] <- mod1_out
+ }
+ fitstats <-bind_rows(fitstats)%>%as.data.frame()%>%mutate(across(OOS_R2:df, as.numeric))
+}
+
+
+pivB <-rename(pivSB, time_step=Year)
 SB_ages <-indv_age(pivSB)%>%mutate(model="SB_ages")
 #################################
 
@@ -198,9 +240,10 @@ SB_fitstats#%>%
  #kbl()%>%kable_classic(full_width = F, html_font = "Cambria")
 
 #write.csv(SB_fitstats, file="SB_fitstatsE9.csv")
-###########################################################################################################################################
+```
 
-############################################# Visualize SB fits over data and combine with N total fit and additive fit #########################
+**Visualize SB fits over data and combine with N total fit and additive fit**  
+```{r}
 SBallresults <-full_join(SBage_final$outsampresults, SBage_final$insampresults, by=c("timestep","pop","obs"))
 
 #create a total index of all the age classes added and bind it to SB all results
@@ -228,12 +271,13 @@ SBallresults%>%
 
 ggsave("SBfitoverdataE9allAgg.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
-###################################################################################################################################################################################
+```
+
 ###################################################################################################################################################################################
 
-
-############################ PAIRWISE DYNAMIC CORRELATION STRIPED BASS ###########################################################################
-###### the corrplot output will not save with ggsave() so you need to remember to manually save it.
+**PAIRWISE DYNAMIC CORRELATION STRIPED BASS**  
+the corrplot output will not save with ggsave() so you need to remember to manually save it.
+```{r}
 maxE =9
 vars = colnames(CTAAA[2:15])
 var_pairs = combn(vars, 2) # Combinations of vars, 2 at a time
@@ -256,13 +300,10 @@ corrplot(rho_matrixSB, method="color", type="upper", diag=FALSE, is.corr = TRUE,
 #mean and SD of dynamic correlation
 mean(rho_matrixSB[!is.na(rho_matrixSB)])
 sd(rho_matrixSB[!is.na(rho_matrixSB)])
-############# Remember to save the corrplot##########################
-###########################################################################################################################################################################
+```
 
-
-
-############################################ SB: COMPARE HIERARCHICAL MIXED-AGE AND SINGLE-AGE APPROACHES #####################################################################
-
+**SB: COMPARE HIERARCHICAL MIXED-AGE AND SINGLE-AGE APPROACHES**
+```{r}
 maxE <-9
 
 #Individual age GP for SB
@@ -286,16 +327,16 @@ fitstats_SBIndvAge <- mutate(SB_ages, across(OOS_R2:df, as.numeric))%>%rownames_
 #extract mixed age fitstats from mixed age model
 fitstats_SBMixed <- mutate(SB_mixed, across(OOS_R2:df, as.numeric))%>%rownames_to_column("age")
 
-###########################################################################################################################################################################
+```
 
 
-#################################################### SB: TIME SERIES LENGTH TEST #####################################################################
+**SB: TIME SERIES LENGTH TEST**  
 ## Test the importance of time series length on forecast performance of empirical data. 
 ## create subsets of the SB dataset with lengths ranging from 5-30 years, increasing in increments of one year
 ## for datasets shorter than 30 years, start from every possible starting point within the original 30 years
 ## average the score over all the starting points for that length
 ## two methods for determining E. Set to E=3 and "varied" as the rounded sqrt of time series length. 
-
+```{r}
 ## VARIED E CHOICE ###
 #inputs
 vars = unique(pivSB$Year)
@@ -348,17 +389,17 @@ modstatsSB <-bind_rows(modstatsSB, modstatsSB_v)
 #now summarize by time series length and e_choice
 modstatsSBsum <- na.omit(modstatsSB) %>% group_by(tslength,e_choice)%>%
  summarize(avOOS_R2=mean(OOS_R2,na.rm=T), sdR2=sd(OOS_R2,na.rm=T), avOOS_rmse=mean(OOS_rmse,na.rm=T), sdrmse=sd(OOS_rmse,na.rm=T), .groups="keep")
-#######################################################################################################################################################################################
-#######################################################################################################################################################################################
-#######################################################################################################################################################################################
+```
 
 
+##################################################################################################################################################
+##################################################################################################################################################
 
-#######################################################################################################################################################################################
-#######################################################################################################################################################################################
-######################## **KLAMATH RIVER FALL CHINOOK ***#######################################################################################################################################
+### SALMON ###
+
+**KLAMATH RIVER FALL CHINOOK **  
 # repeat the previous analysis for striped bass, but make it salmon. 
-# 
+
 #brood.yr  = calendar year that parental spawners returned to the river and spawned
 #calendar.yr = year of river return for progeny of the brood year
 #age = calendar.yr - brood.yr
@@ -369,7 +410,8 @@ modstatsSBsum <- na.omit(modstatsSB) %>% group_by(tslength,e_choice)%>%
 #
 #1984-2016... but age 5 is missing in 1994 (what to do?)
 
-
+**read in KRFC data and format**  
+```{r}
 KRFC <- read.csv("KRFC.csv", header = TRUE)
 
 ####CHANGE TO 1986 to 2016 so it will be 30 YEARS
@@ -385,6 +427,11 @@ esc.wide = filter(esc.wide, Year >1985 & Year < 2017)
 esc.Ntotal = filter(esc.Ntotal, Year >1983 & Year < 2017)
 KRFC.esc <-filter(KRFC.esc, calendar.yr > 1983 & calendar.yr < 2017)%>%dplyr::rename("Year"=calendar.yr, "age_class"=age, "value"=escapement)
 
+
+```
+
+**Plot KRFC time series** 
+```{r}
 #plot the raw data. 
 KRFC.esc %>%
  ggplot(aes(Year,value))+
@@ -393,12 +440,14 @@ KRFC.esc %>%
  theme_classic()
 ggsave("KRFC_rawData.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
-################################################################################################################################################################
+
+```
 
 
-########################################## CREATE THE LAGGED CORRELATION MATRIX FOR KRFC #######################################################
+**CREATE THE LAGGED CORRELATION MATRIX FOR KRFC**
 # remember to manually save the corrplot because ggsave wont work
 #We are really only interested in 1987-end
+```{r}
 krblock <-make_block(esc.wide,max_lag = 4, tau=1)
 krblock2 <-dplyr::select(krblock, "X2(t+0)","X3(t+1)","X4(t+2)","X5(t+3)")
 names(krblock2) <-c("age2 (t+0)", "age3 (t+1)","age4(t+2)","age5 (t+3)")   
@@ -412,16 +461,19 @@ length(M2$dist) == length(unique(M2$dist))
 mean(M2$dist)
 sd(M2$dist)
 #GG save doesn't work for corrplots
-###############################################################################################################################################################
+```
 
 
-######### **LOG THE DATA** ########### REMEMBER TO TURN THIS OFF ####################
+ **LOG THE DATA** 
+########### REMEMBER TO TURN THIS OFF ####################
+```{r}
 #KRFC.esc=mutate(KRFC.esc,value=log(value+1))
 #esc.Ntotal=mutate(esc.Ntotal,N_total=log(N_total+1))
-###############################################################################################################################################################
+```
 
 
-#################### GRID OF E AND TAU ##############################################################################################
+**GRID OF E AND TAU**  
+```{r}
 Ees <-seq(2,10,1)
 taus <-seq(1,3,1)
 var_pairs = expand.grid(Ees, taus) # Combinations of vars, 2 at a time
@@ -491,11 +543,12 @@ KRFCETdf %>%
 
 ggsave("RMSE_ETKRFC.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
-###############################################################################################################################################################
-#best E=6, best tau=1
+```
+best E=6, best tau=1
 
 
-###################################### FIT THE KRFC MODELS AND EXTRACT FITS ##########################################################################
+**FIT THE KRFC MODELS AND EXTRACT FITS**  
+```{r}
 maxE <-6
 
 #NTOTAL
@@ -525,11 +578,12 @@ KRFC_fitstats#%>%
  #kbl()%>%kable_classic(full_width = F, html_font = "Cambria")
 
 write.csv(KRFC_fitstats, file="KRFC_fitstatsE6.csv")
-###############################################################################################################################################################
+```
 
 
 
-########################################## PLOT KRFC MODELS OVER DATA ########################################################################
+**PLOT KRFC MODELS OVER DATA**  
+```{r}
 KRFCallresults <-full_join(KRFCage_final$outsampresults, KRFCage_final$insampresults, by=c("timestep","pop","obs"))%>%mutate(age=paste("age ",as.character(pop)), pop=as.character(pop))
 
 #create a total index of all the age classes added
@@ -556,11 +610,14 @@ KRFCallresults%>%
 
 ggsave("KRFCfitoverdataE6all.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
-##################################################################################################################################################################################################
+```
 
 
-######################################### PAIRWISE DYNAMIC CORRELATION KRFC ########################################################################
-###remember to manually save the corrplot. 
+
+
+**PAIRWISE DYNAMIC CORRELATION KRFC**  
+###remember to manually save the corrplot.  
+```{r}
 maxE =6
 vars = seq(2,5,1)
 var_pairs = combn(as.factor(vars), 2) # Combinations of vars, 2 at a time
@@ -584,12 +641,13 @@ corrplot(rho_matrixKR, method="color", type="upper", diag=FALSE, is.corr = TRUE,
 #mean and SD of dynamic correlation
 mean(rho_matrixKR[!is.na(rho_matrixKR)])
 sd(rho_matrixKR[!is.na(rho_matrixKR)])
-#############################################################################################################################################################################
+```
 
 
 
 
-############################################### KRFC: COMPARE HIERARCHICAL, MIXED AGE AND SINGLE AGE APPROACHES #############################
+**KRFC: COMPARE HIERARCHICAL, MIXED AGE AND SINGLE AGE APPROACHES**  
+```{r}
 maxE <-6
 
 #Individual age GP for SB
@@ -614,13 +672,12 @@ fitstats_KRFCIndvAge <- mutate(KRFC_ages, across(OOS_R2:df, as.numeric))%>%rowna
 
 #extract mixed age fitstats from mixed age model
 fitstats_KRFCMixed <- mutate(KRFC_mixed, across(OOS_R2:df, as.numeric))%>%rownames_to_column("age")
-#####################################################################################################################################################################
-#####################################################################################################################################################################
+```
 
 
-
-###################################### COMBINE WITH SB FITSTATS AND EXPORT FOR DATA VIS ##############################################################################
+**COMBINE WITH SB FITSTATS AND EXPORT FOR DATA VIS** 
 # we are not doing this here because it will be combined with the simulation data and done in Sim_data_vis later. 
+```{r}
 fitstats <-bind_rows(fitstats_KRFCHier,fitstats_SBHier,fitstats_KRFCIndvAge,fitstats_SBIndvAge,fitstats_KRFCMixed,fitstats_SBMixed)
 
 KRFC_fitstats <-mutate(KRFC_fitstats, species="Chinook Salmon")
@@ -631,7 +688,19 @@ Fits2 <-filter(Fits, model %in% c("KRFC_ageStruc","KRFC_Ntotal","SB_ageStruc","S
 fitstats <-bind_rows(fitstats,Fits2)
 write.csv(fitstats,"mixedage_fitstats_emp.csv")
 #write.csv(fitstats,"mixedage_fitstats_empLOG.csv")
-###############################################################################################################################################################
+```
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
