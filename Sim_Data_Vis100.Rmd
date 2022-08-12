@@ -26,6 +26,8 @@ library(ggrepel)
 library(ggbreak)
 ```
 
+This creates the hundred data comp visualizations. 
+
 **import the data**
 ```{r}
 phi_Sim1 <-read.csv("Sim1Phis_100data.csv", header=T)%>%mutate(sim="I")
@@ -396,8 +398,8 @@ fig2filt%>%
   plot.background = element_rect(fill = "white",colour = "white", size=0.5),
   panel.border = element_rect(colour="black",fill=NA, size=0.3))
 
-#ggsave("ntotallengthsTanya2.png",path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-#dev.off()
+ggsave("Boxplot_Hier_TA.png",path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+dev.off()
 
 
 ```
@@ -445,8 +447,8 @@ fig4filt%>%
   plot.background = element_rect(fill = "white",colour = "white", size=0.5),
   panel.border = element_rect(colour="black",fill=NA, size=0.3))
 
-#ggsave("ntotallengthsTanyaOVERALhier.png",path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-#dev.off()
+ggsave("Boxplot_sumhier_TA.png",path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+dev.off()
 
 
 ```
@@ -487,8 +489,8 @@ fig3filt%>%
   panel.border = element_rect(colour="black",fill=NA, size=0.3))
 
 
-#ggsave("ntotallengthsno6.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-#dev.off()
+ggsave("Boxplot_hier.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+dev.off()
 ```
 
 

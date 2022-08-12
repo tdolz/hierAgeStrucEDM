@@ -1,0 +1,476 @@
+---
+title: "mixedagevis"
+author: "tara"
+date: "8/10/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+###Comparison of hierarchical, mixed and single age models:###   
+Produces visualizations for the "mixedAgeloop" analysis and the empirical analysis to create the mixed age comparison and the tiny violins plot. 
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(purrr)
+library(ggplot2)
+library(cowplot)
+library(ggbreak)
+library(forcats)
+library(metR)
+library(grid)
+library(gridExtra)
+```
+
+**IMPORT DATA**
+```{r}
+#read in empirical data
+#emp <-read.csv("mixedage_fitstats_emp.csv", header=T)
+emp <-read.csv("mixedage_fitstats_empLOG.csv", header=T)## LOG SCALE VERSION
+emp["Hierarchal"]<-"Hierarchical"
+
+#read in simulated data - all are logged
+mixsim <-read.csv("mixedageoutnew.csv", header=T)
+mixsim["Hierarchal"]<-"Hierarchical"
+```
+
+**Format the empirical 
+```{r}
+#format the data & fix the age of the salmon data
+emp <-emp %>% separate(model,c("species","modeltype"),sep="_",remove=F)%>%
+  mutate(age=as.numeric(age))%>%
+  mutate(age=ifelse(species=="KRFC",age+1,age))%>%
+  mutate(age=ifelse(is.na(age),"all",age))
+
+
+#make sure the names are consistent
+emp$modeltype=fct_recode(emp$modeltype, "Hier"="Hier", "IndvAge"="indvAge","MixedAge"="mixedAge","Hier"="ageStruc","NTotal"="Ntotal")
+emp2 <-dplyr::select(emp, age, OOS_R2,OOS_rmse, modeltype, species)%>%dplyr::rename(model=modeltype)
+
+#you probably won't have to do this again because it should be fixed
+mixsim = mutate(mixsim, Sim=ifelse(is.na(Sim),"I", Sim))
+
+mixsim=rename(mixsim, species=Sim)
+#mixsim$model = fct_recode(mixsim$model, "Hierarchical"="Hierarchal")
+
+#format the data
+mixsimsum <-mixsim %>% group_by(species,model,age)%>%
+  summarize(OOSR2=mean(OOS_R2),sdOOSR2=sd(OOS_R2),OOSrmse=mean(OOS_R2),sdOOSrmse=sd(OOS_rmse),.groups="drop")%>%dplyr::rename(OOS_R2=OOSR2, OOS_rmse=OOSrmse)
+mixsimsum$model <-fct_recode(mixsimsum$model,"Hier"="Hier","IndvAge"="IndvAge","MixedAge"="Mixed","Hier"="modHier","NTotal"="modNT")
+
+
+#bind together
+mixall<-bind_rows(mixsimsum,emp2)%>%as.data.frame()
+mixall$age <-fct_relevel(mixall$age,"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19" ,"20","all")
+
+#turn the Ntotal model into a subset of the IndAge model
+mixall$model <-fct_recode(mixall$model, "IndvAge"="NTotal")
+mixall$model <-fct_recode(mixall$model,"Hierarchical"="Hier","Single Age"="IndvAge","Mixed Age"="MixedAge")
+
+#the og permutation data for little violins
+mixsim$model <-fct_recode(mixsim$model,"Hier"="Hier","IndvAge"="IndvAge","MixedAge"="Mixed","Hier"="modHier","NTotal"="modNT")
+mix2<-bind_rows(mixsim,emp2)%>%as.data.frame()
+mix2$model <-fct_recode(mix2$model, "IndvAge"="NTotal")
+mix2$model <-fct_recode(mix2$model,"Hierarchical"="Hier","Single Age"="IndvAge","Mixed Age"="MixedAge")
+mix2$age <-fct_relevel(mix2$age,"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19" ,"20","all")
+mix2$model <-fct_relevel(mix2$model,c("Hierarchical","Mixed Age", "Single Age"))
+```
+
+**mixed age plot in 5 panels with vertical columns of points**
+```{r}
+modlcols <-c("Single Age"="grey","Hierarchical"="grey", "Mixed Age"="grey")
+
+mixall%>%
+  filter(age != "all")%>%
+  #filter(species %in% c("I","II","III"))%>%
+  ggplot(aes(model, OOS_R2))+
+  geom_point(aes(y = OOS_R2), 
+               position = position_jitter(width=0.15), 
+             size = 1,color="grey") +
+ geom_boxplot(outlier.shape=NA, width=0.3, fill="grey", alpha=0.6)+
+  #geom_point(data=filter(mixall, age == "all"),aes(y = OOS_R2), 
+              # position = position_dodge2(), 
+            # size = 2, shape=19) +
+ ylab("Out-of-sample r-squared")+xlab("")+
+  facet_wrap(~species, scales="free_y",nrow=2)+
+  theme(
+  axis.text.x = element_text(size=12),
+  axis.text.y = element_text(size=12),
+  axis.title.x=element_text(size=14,face="bold",margin=margin(t=8,unit="pt")),
+  axis.title.y=element_text(size=14,face="bold",margin=margin(r=8,unit="pt")),
+  strip.background =element_rect(fill="transparent"),
+  strip.text = element_text(size=12),
+  legend.position = "none",
+  panel.spacing = unit(1.5, "mm"),
+  panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill = "transparent",colour = "dark grey"),
+  plot.background = element_rect(fill = NA,colour = "transparent"),
+  panel.border = element_rect(colour="black",fill=NA, size=0.3)
+ )
+#ggsave("MixedAge.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#dev.off()
+```
+**Mixed Age separate plots to use breaks, with grobs**
+```{r}
+mixall$model <-fct_relevel(mixall$model, c("Hierarchical","Mixed Age", "Single Age"))
+
+###########TOP ROW##############
+#SimI#
+Sim1 <-mixall%>%
+  filter(age != "all")%>%filter(species =="I")%>%
+  ggplot(aes(model, OOS_R2))+
+  geom_point(aes(y = OOS_R2),position = position_jitter(width=0.15),size = 1,color="dark grey") +
+ geom_boxplot(outlier.shape=NA, width=0.3, fill="grey", alpha=0.6)+
+ ylab("")+xlab("")+
+  #scale_y_break(c(0.36,0.92), scales=5)+
+  facet_wrap(~species, scales="free_y")+
+  theme(
+  axis.text.x = element_text(size=12),axis.text.y = element_text(size=12),
+  axis.title.x=element_text(size=14,face="bold",margin=margin(t=8,unit="pt")),
+  axis.title.y=element_text(size=14,face="bold",margin=margin(r=8,unit="pt")),
+  strip.background =element_rect(fill="transparent"),strip.text = element_text(size=12),
+  legend.position = "none",panel.spacing = unit(1.5, "mm"),
+  panel.grid.major = element_blank(),panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill = "transparent",colour = "dark grey"),
+  plot.background = element_rect(fill = NA,colour = "transparent"),
+  panel.border = element_rect(colour="black",fill=NA, size=0.3))
+ggsave("MixedAge1.png", width=4, height=4, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+
+
+#SimII#
+Sim2 <-mixall%>%
+  filter(age != "all")%>%filter(species =="II")%>%
+  ggplot(aes(model, OOS_R2))+
+  geom_point(aes(y = OOS_R2),position = position_jitter(width=0.15),size = 1,color="dark grey") +
+ geom_boxplot(outlier.shape=NA, width=0.3, fill="grey", alpha=0.6)+
+ ylab("")+xlab("")+
+  scale_y_break(c(0.86,0.99), scales=1)+
+  facet_wrap(~species, scales="free_y")+
+  theme(
+  axis.text.x = element_text(size=12),axis.text.y = element_text(size=12),
+  axis.title.x=element_text(size=14,face="bold",margin=margin(t=8,unit="pt")),
+  axis.title.y=element_text(size=14,face="bold",margin=margin(r=8,unit="pt")),
+  strip.background =element_rect(fill="transparent"),strip.text = element_text(size=12),
+  legend.position = "none",panel.spacing = unit(1.5, "mm"),
+  panel.grid.major = element_blank(),panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill = "transparent",colour = "dark grey"),
+  plot.background = element_rect(fill = NA,colour = "transparent"),
+  panel.border = element_rect(colour="black",fill=NA, size=0.3))
+ggsave("MixedAge2.png", width=4, height=4, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+
+
+#SimIII#
+Sim3 <-mixall%>%
+  filter(age != "all")%>%filter(species =="III")%>%
+  ggplot(aes(model, OOS_R2))+
+  geom_point(aes(y = OOS_R2),position = position_jitter(width=0.15),size = 1,color="dark grey") +
+ geom_boxplot(outlier.shape=NA, width=0.3, fill="grey", alpha=0.6)+
+ ylab("")+xlab("")+
+  scale_y_break(c(0.96,0.9925), scales=1)+
+  facet_wrap(~species, scales="free_y")+
+  theme(
+  axis.text.x = element_text(size=12),axis.text.y = element_text(size=12),
+  axis.title.x=element_text(size=14,face="bold",margin=margin(t=8,unit="pt")),
+  axis.title.y=element_text(size=14,face="bold",margin=margin(r=8,unit="pt")),
+  strip.background =element_rect(fill="transparent"),strip.text = element_text(size=12),
+  legend.position = "none",panel.spacing = unit(1.5, "mm"),
+  panel.grid.major = element_blank(),panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill = "transparent",colour = "dark grey"),
+  plot.background = element_rect(fill = NA,colour = "transparent"),
+  panel.border = element_rect(colour="black",fill=NA, size=0.3))
+ggsave("MixedAge3.png", width=4, height=4, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+
+
+#BOTTOM ROW
+bottomrow <-mixall%>%
+  filter(age != "all")%>%
+  filter(species %in% c("SB","KRFC"))%>%
+  ggplot(aes(model, OOS_R2))+
+  geom_point(aes(y = OOS_R2), 
+               position = position_jitter(width=0.15), 
+             size = 1,color="dark grey") +
+ geom_boxplot(outlier.shape=NA, width=0.3, fill="grey", alpha=0.6)+
+  #geom_point(data=filter(mixall, age == "all"),aes(y = OOS_R2), 
+              # position = position_dodge2(), 
+            # size = 2, shape=19) +
+ ylab("")+xlab("")+
+  facet_wrap(~species, scales="free_y")+
+  theme(
+  axis.text.x = element_text(size=12),
+  axis.text.y = element_text(size=12),
+  axis.title.x=element_text(size=14,face="bold",margin=margin(t=8,unit="pt")),
+  axis.title.y=element_text(size=14,face="bold",margin=margin(r=8,unit="pt")),
+  strip.background =element_rect(fill="transparent"),
+  strip.text = element_text(size=12),
+  legend.position = "none",
+  panel.spacing = unit(1.5, "mm"),
+  panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill = "transparent",colour = "dark grey"),
+  plot.background = element_rect(fill = NA,colour = "transparent"),
+  panel.border = element_rect(colour="black",fill=NA, size=0.3)
+ )
+ggsave("MixedAgeBottom.png", width=10, height=4, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+
+
+#
+### GROB ARRANGE #### apparently not compatible with ggbreaks so just 
+#plotlist1 <-plot_grid(Sim1, Sim2, Sim3, ncol = 3 #,labels=c("I","II","III"))
+#plotlist2 <-plot_grid(bottomrow, ncol = 1 #,labels=c("e.","f.","g.","h."))
+#y.grob <- textGrob("Out-of-sample r-squared", gp=gpar(fontface="bold", col="black", fontsize=12), rot=90)
+#x.grob <- textGrob("",gp=gpar(fontface="bold", col="black", fontsize=12))
+#mainplot <-plot_grid(plotlist1,plotlist2, nrow = 2)
+#grid.arrange(arrangeGrob(mainplot, left = y.grob, top = x.grob #,padding = unit(20, "line")))
+
+```
+
+
+**some summary stats**
+```{r}
+mixall%>%
+  #filter(species %in% c("KRFC","SB"))%>%
+  filter(species %in% c("I","II","III"))%>%
+  filter(age !="all")%>%
+  group_by(model)%>%summarize(meanr2=mean(OOS_R2),sdr2=sd(OOS_R2))
+
+mixall%>%
+  filter(species %in% c("KRFC","SB"))%>%
+  filter(age !="all")%>%
+  group_by(species)%>%summarize(meanr2=mean(OOS_R2),sdr2=sd(OOS_R2))
+
+mixall%>%
+  #filter(species %in% c("KRFC","SB"))%>%
+  filter(species %in% c("I","II","III"))%>%
+  #filter(age !="all")%>%
+  filter(age =="all")%>%
+  group_by(model,species)%>%summarize(meanr2=mean(OOS_R2),sdr2=sd(OOS_R2),.groups = "drop")
+
+mixall%>%
+  #filter(species %in% c("KRFC","SB"))%>%
+  filter(age =="all")%>%
+  group_by(model,species)%>%summarize(meanr2=mean(OOS_R2),sdr2=sd(OOS_R2),.groups = "drop")
+
+mixall%>%
+  filter(species %in% c("KRFC","SB"))%>%
+  filter(age =="all")%>%
+  group_by(model)%>%summarize(meanr2=mean(OOS_R2),sdr2=sd(OOS_R2),.groups = "drop")
+
+```
+
+**tiny violins**
+```{r}
+mix2$age <-fct_relevel(mix2$age,"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19" ,"20","all")
+
+mix2%>%
+ #filter(species=="II")%>%
+  ggplot()+
+    #geom_boxplot(aes(age, OOS_R2), outlier.shape=NA)+
+   geom_boxplot(aes(age, OOS_R2),outlier.size=0.2)+
+  #ylim(-0.25,1.00)+
+ ylab("Out of sample r-squared")+ xlab("Age class")+
+ facet_grid(species~model, scales="free")+
+  theme_bw()+
+  theme(strip.background =element_rect(fill="white"),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size=10),
+  axis.text.y = element_text(size=10),
+  strip.text = element_text(size=12),
+  axis.title.x=element_text(size=12,face="bold",margin=margin(t=8,unit="pt")),
+  axis.title.y=element_text(size=12,face="bold",margin=margin(r=8,unit="pt")),
+        )
+
+#ggsave("tinyviolins.pdf",width = 12, height = 6,path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#dev.off()
+```
+
+
+
+**tiny violins as a grob plot**  
+The var pairs way
+```{r}
+mods <-c("Hierarchical","Mixed Age", "Single Age")
+simlist <-c("I","II","III","KRFC","SB")
+var_pairs <-expand.grid(mods, simlist)
+var_pairs <-as.matrix(var_pairs)
+out_matrix = array(NA, dim = c(length(mods), length(simlist)), dimnames = list(mods,simlist)) 
+plotlist <-list()
+
+for (i in 1:nrow(var_pairs)) {
+ fits <-filter(mix2,model==var_pairs[i,1])%>%
+        #filter(age.class !="all" & age != "all")%>%
+    filter(species==var_pairs[i,2])
+ p<- fits%>%
+  ggplot(aes(age, OOS_R2))+
+      #geom_boxplot(aes(age, OOS_R2), outlier.shape=NA)+
+      #geom_point()+
+  #ylim(min(fits$OOS_R2),max(fits$OOS_R2))+
+   geom_boxplot(aes(age, OOS_R2),outlier.size=0.2)+
+ ylab("")+xlab("")+
+  #ggtitle(paste(var_pairs[i,1],var_pairs[i,2]))+
+ #guides(fill=guide_legend(title="model"))+
+   theme_bw()+
+  theme(strip.background =element_rect(fill="white"),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size=10),
+  axis.text.y = element_text(size=10),
+  strip.text = element_text(size=12),
+  axis.title.x=element_text(size=12,face="bold",margin=margin(t=8,unit="pt")),
+  axis.title.y=element_text(size=12,face="bold",margin=margin(r=8,unit="pt")))
+ plotlist[[i]]<-p
+}
+
+
+y.grob <- textGrob("Out-of-sample r-squared", 
+                   gp=gpar(fontface="bold", col="black", fontsize=12), rot=90)
+
+x.grob <- textGrob("", 
+                   gp=gpar(fontface="bold", col="black", fontsize=12))
+
+
+mainplot <-plot_grid(plotlist[[1]],plotlist[[2]],plotlist[[3]],
+                     plotlist[[4]],plotlist[[5]],plotlist[[6]],
+                     plotlist[[7]],plotlist[[8]],plotlist[[9]],
+                     plotlist[[10]],plotlist[[11]],plotlist[[12]],
+                     plotlist[[13]],plotlist[[14]],plotlist[[15]],  nrow = 5)
+grid.arrange(arrangeGrob(mainplot, left = y.grob, top = x.grob#,padding = unit(20, "line")
+                         ))
+mainplot
+
+
+```
+
+**tiny violins one row at a time...**
+```{r}
+### I ####
+mix2%>%
+ filter(species=="I")%>%
+  ggplot()+
+    #geom_boxplot(aes(age, OOS_R2), outlier.shape=NA)+
+   geom_boxplot(aes(age, OOS_R2),outlier.size=0.2)+
+  #ylim(-0.25,1.00)+
+ ylab("Out of sample r-squared")+ xlab("Age class")+
+ facet_grid(species~model, scales="free")+
+  theme_bw()+
+  theme(strip.background =element_blank(),
+        #strip.background =element_rect(fill="white"),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_blank(),
+  axis.text.y = element_text(size=14),
+  strip.text = element_text(size=14),
+  axis.title.x=element_blank(),
+  axis.title.y=element_blank(),
+  axis.ticks.x=element_blank(),
+        )
+ggsave("tinyviolinsI.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#dev.off()
+
+### II ####
+mix2%>%
+ filter(species=="II")%>%
+  ggplot()+
+    #geom_boxplot(aes(age, OOS_R2), outlier.shape=NA)+
+   geom_boxplot(aes(age, OOS_R2),outlier.size=0.2)+
+  ylim(-0.25,1.00)+
+ ylab("Out of sample r-squared")+ xlab("Age class")+
+ facet_grid(species~model, scales="free")+
+  theme_bw()+
+  theme(strip.background.x =element_rect(fill="white"),
+        strip.background.y =element_blank(),
+        strip.text.x = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_blank(),
+  axis.text.y = element_text(size=14),
+  strip.text = element_text(size=14),
+  axis.title.x=element_blank(),
+  axis.title.y=element_blank(),
+  axis.ticks.x=element_blank(),
+        )
+ggsave("tinyviolinsII.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#dev.off()
+
+### III ####
+mix2%>%
+ filter(species=="III")%>%
+  ggplot()+
+    #geom_boxplot(aes(age, OOS_R2), outlier.shape=NA)+
+   geom_boxplot(aes(age, OOS_R2),outlier.size=0.2)+
+  ylim(-0.25,1.00)+
+ ylab("Out of sample r-squared")+ xlab("Age class")+
+ facet_grid(species~model, scales="free")+
+  theme_bw()+
+  theme(strip.background.x =element_rect(fill="white"),
+        strip.background.y =element_blank(),
+        strip.text.x = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_blank(),
+  axis.text.y = element_text(size=14),
+  strip.text = element_text(size=14),
+  axis.title.x=element_blank(),
+  axis.title.y=element_blank(),
+  axis.ticks.x=element_blank(),
+        )
+ggsave("tinyviolinsIII.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#dev.off()
+
+### KRFC ####
+mix2%>%
+ filter(species=="KRFC")%>%
+  ggplot()+
+    #geom_boxplot(aes(age, OOS_R2), outlier.shape=NA)+
+   geom_boxplot(aes(age, OOS_R2),outlier.size=0.2)+
+  ylim(-0.25,1.00)+
+ ylab("Out of sample r-squared")+ xlab("Age class")+
+ facet_grid(species~model, scales="free")+
+  theme_bw()+
+  theme(strip.background.x =element_rect(fill="white"),
+        strip.background.y =element_blank(),
+        strip.text.x = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_blank(),
+  axis.text.y = element_text(size=14),
+  strip.text = element_text(size=14),
+  axis.title.x=element_blank(),
+  axis.title.y=element_blank(),
+  axis.ticks.x=element_blank(),
+        )
+ggsave("tinyviolinsKRFC.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#dev.off()
+
+
+### SB ####
+mix2%>%
+ filter(species=="SB")%>%
+  ggplot()+
+    #geom_boxplot(aes(age, OOS_R2), outlier.shape=NA)+
+   geom_boxplot(aes(age, OOS_R2),outlier.size=0.2)+
+  ylim(-0.25,1.00)+
+ ylab("Out of sample r-squared")+ xlab("Age class")+
+ facet_grid(species~model, scales="free")+
+  theme_bw()+
+  theme(strip.background.x =element_rect(fill="white"),
+        strip.background.y =element_blank(),
+        strip.text.x = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size=12),
+  axis.text.y = element_text(size=14),
+  strip.text = element_text(size=14),
+  axis.title.x=element_text(size=14,face="bold",margin=margin(t=8,unit="pt")),
+  axis.title.y=element_blank(),
+        )
+ggsave("tinyviolinsSB.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#dev.off()
+
+
+```
+
+

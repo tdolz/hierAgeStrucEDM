@@ -239,7 +239,7 @@ SB_fitstats#%>%
  #filter(model=="SB_ageStruc")%>%
  #kbl()%>%kable_classic(full_width = F, html_font = "Cambria")
 
-#write.csv(SB_fitstats, file="SB_fitstatsE9.csv")
+write.csv(SB_fitstats, file="SB_fitstatsE9.csv")
 ```
 
 **Visualize SB fits over data and combine with N total fit and additive fit**  
