@@ -30,58 +30,16 @@ library(plotly)
 
 **Import parallel crossfits data**
 ```{r}
-#the following CSVs were created on the 50 core server using the script parallelCrossfit.R. There is also a version on the local machine.
-#
-#The NEWER versions are on the bottom. 
+#the following CSVs were created on the 50 core server using the script parallelCrossfit.R. 
 
-#TWO SPECIES XXL 
-#pxfits <-read.csv("crossfits2sppXXLrestrictMaxE.csv",header=TRUE) #option 1 
-#pxfits <-read.csv("crossfits2sppXXLOpt2MaxE.csv",header=TRUE) # option 2
-#pxfits <-read.csv("crossfits2sppXXLSteveoos2.csv",header=TRUE) # option 2
-#pxfits <-read.csv("crossfits2sppXXLTau4.csv",header=TRUE) # altering tau
-pxfits<-read.csv("crossfits2sppXXLSHORTOSC_LN.csv",header=TRUE) #shorter oscillations, logged
-#TWO SPECIES MEDIUM
-#pxfits <-read.csv("crossfits2sppMEDrestrictMaxE.csv",header=TRUE) #option 1 
-#pxfits <-read.csv("crossfits2sppMEDTau2.csv",header=TRUE) # playing with tau
-#pxfits<-read.csv("crossfits2sppMED_LN.csv",header=TRUE) #tanyas changes and logged. 
-#ONE SPECIES RICKER
-##pxfits <-read.csv("crossfitsONESPPrestrictMaxE.csv",header=TRUE) #option 1 
-#pxfits <-read.csv("crossfitsONESPPTau2.csv",header=TRUE) # playing with tau 
-#pxfits<-read.csv("crossfitsONESPP_LN.csv",header=TRUE) #tanyas changes and logged. 
+pxfit_test <-read.csv("testfoo.csv", header=TRUE)
+pxfit1 <-read.csv("crossfits_sim1.csv",header=TRUE)
+pxfit2 <-read.csv("crossfits_sim2.csv",header=TRUE)
+pxfit3 <-read.csv("crossfits_sim3.csv",header=TRUE)
+
+pxfits <-pxfit3
 ```
 
-```{r}
-#inspect preylist
-#preylist <-read.csv("preylists2sppXXLSHORTOSC.csv") #two species xxl
-#preylist <-read.csv("preylists2sppXXL.csv") #two species xxl
-#preylist <-read.csv("preylists2sppMED.csv") #two species med
-#preylist <-read.csv("preylistsOneSpp.csv") #one species
-#
-preylist <-filter(preylist, age_class !="V21")
-
-preylist$age <-fct_recode(preylist$age_class, "1"="V1","2"="V2","3"="V3","4"="V4","5"="V5","6"="V6","7"="V7","8"="V8","9"="V9","10"="V10","11"="V11","12"="V12","13"="V13","14"="V14","15"="V15","16"="V16","17"="V17","18"="V18","19"="V19","20"="V20")
-preylist <-mutate(preylist, age=as.numeric(as.character(age)))
-
-preylist%>%
-  #filter(index <= 25)%>%  #look at 25 plots at a time or it crashes.. 
-  #filter(index > 25 & index <= 50)%>%
-  #filter(index > 50 & index <= 75)%>%
-  #filter(index > 75)%>%
-  filter(time_step > 299 & time_step < 310)%>%
-  filter(index == 1)%>%
-  #mutate(value=log(value))%>% 
-  ggplot(aes(time_step,value))+
-  scale_x_continuous(breaks=seq(300,310,2))+
-  geom_line()+
-  geom_vline(xintercept = 305, color="blue",lty="dotted")+
-  ylab("abundance")+xlab("time step")+ggtitle("simulation I (LN)")+
-  facet_wrap(~age,scales="free")+
-  theme_classic()
-#ggsave("preyvisSim_ILN.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-#dev.off()
-
-summaryprey <- preylist %>% group_by(index)%>%summarize(rec1=min(recnoise1), rec2=min(recnoise2), popcrash=min(value), poppeak=max(value), varpop=var(value), meanpop=mean(value))
-```
 
 **Visualize parallel crossfits data: step one, organize the data**
 ```{r}
@@ -97,24 +55,10 @@ pxfits <-mutate(pxfits, age=as.numeric(as.character(age)))#%>%mutate(numpoints=t
 pxsum <-pxfits %>%group_by(age, time_step)%>%summarize(medRSQ=median(Rsq), sdRSQ = sd(Rsq), meanRSQ=mean(Rsq), E=max(E), sdRMSE=sd(rmse), meanRMSE=mean(rmse),sdDYRHO=sd(dy_rho), meanDYRHO=mean(dy_rho),maxRSQ =max(Rsq),
                                                        #meanNRMSE=mean(NRMSE), sdNRMSE=sd(NRMSE),
                                                        .groups='drop')
-
-#calc r-squared range
-min(pxsum$meanRSQ)
-max(pxsum$meanRSQ)
-
-#filter and then calculate
-pxcut <-filter(pxsum, time_step <=20)
-min(pxcut$meanRSQ)
-max(pxcut$meanRSQ)
-
-#fancy finagling for the 2 spp medium
-#pxsum <-mutate(pxsum, corrMeanRsq = ifelse(meanRSQ < -1.2, -1.2, meanRSQ))
-
-#cut off dataframe - REMEMBER TO TURN THIS OFF
-#pxsum = filter(pxsum, time_step > 5 & age >= 4)
 ```
 
 **Contour plot in Plotly**
+Format
 ```{r}
 #what is the metric you are trying to make a plot out of?
 met <-"meanRSQ"
@@ -125,23 +69,10 @@ rhomat <-pivot_wider(pxsum, id_cols="time_step",names_from = "age",values_from =
 rhomat <-rhomat %>% remove_rownames %>% mutate(time_step =time_step - 10) %>% column_to_rownames(var="time_step") #when using the 10 year sequential
 #rhomat <-rhomat %>% remove_rownames %>% column_to_rownames(var="time_step")
 rhomat <-as.matrix(rhomat)
+```
 
-#As surface plot
-#fig <-plot_ly(type="surface",
-             # x=~rownames(rhomat), y=~colnames(rhomat), z=~t(rhomat))
-#fig %>% layout(scene = list(xaxis = list(title = 'years included', nticks=8, range=c(5,40)),
-                                     #yaxis = list(title = 'number age classes included', nticks=10, range=c(1,20)),
-                                     #zaxis = list(title = 'r-squared',nticks=10, range=c(0,1)))) 
-                                     #zaxis = list(title = metname)))
-                                     #
-#calc r-squared range
- 
-
-#zooming in
-#rhomat <-rhomat[1:11,] #5-15     
-rhomat2 <-rhomat[6:11,1:10] #10-15 years, 1-10 ages  
-#rhomat <-rhomat[11:16,1:10] #11-16 years, 1-10 ages  #for the 2 spp med
-
+**contour plot**  
+```{r}
 z_data = t(rhomat)
 
 contours <- list(
@@ -170,7 +101,17 @@ fig1 <-plot_ly(type="contour",
                                                   tickfont = list(size = 14),titlefont = list(size = 14)),
                                      zaxis = list(title = 'r-squared',nticks=10, range=c(0,1),tickfont = list(size = 14)))
                                     # zaxis = list(title = metname))   
-  
+fig1
+```
+
+**Zoom in on contour plot**
+```{r}
+#zooming in
+rhomat2 <-rhomat[1:11,] #5-15  
+#rhomat2 <-rhomat[6:11,1:10] #10-15 years, 1-10 ages  
+#rhomat <-rhomat[11:16,1:10] #11-16 years, 1-10 ages  #for the 2 spp med
+
+
 
 #zoom in 
 fig2 <-plot_ly(type="contour",
@@ -195,9 +136,29 @@ fig2 <-plot_ly(type="contour",
 #fig <- subplot(fig1, fig2)
 #fig <- fig %>% layout(coloraxis=list(colorscale='Jet'))
 
-fig1
+
+
 fig2
 ```
+
+##### MESSING AROUND ######
+
+**surface plot**
+```{r}
+#As surface plot
+#fig <-plot_ly(type="surface",
+             # x=~rownames(rhomat), y=~colnames(rhomat), z=~t(rhomat))
+#fig %>% layout(scene = list(xaxis = list(title = 'years included', nticks=8, range=c(5,40)),
+                                     #yaxis = list(title = 'number age classes included', nticks=10, range=c(1,20)),
+                                     #zaxis = list(title = 'r-squared',nticks=10, range=c(0,1)))) 
+                                     #zaxis = list(title = metname)))
+                                     #
+#calc r-squared range
+``` 
+
+
+
+
 
 **mean dynamic correlation in plotly**
 ```{r}
@@ -251,21 +212,22 @@ fig2
 ```{r}
 
 #ZOOM IN 
-pxsum2 <-filter(pxsum, time_step <= 25 & time_step >=20 & age <=10)
+#pxsum <-filter(pxsum, time_step <= 25 & time_step >=20 & age <=10)
 #pxsum2 <-pxsum
 
 #yet another way to do contour plots (in ggplot)
-rsqcont <-dplyr::select(pxsum2, age, time_step, meanRSQ)%>%mutate(time_step=time_step-10)%>%as.data.frame
+rsqcont <-dplyr::select(pxsum, age, time_step, meanRSQ)%>%mutate(time_step=time_step-10)%>%as.data.frame
 rsqcont %>%
   ggplot(aes(x=time_step,y=age,z=meanRSQ))+
-  #geom_contour_filled()+
-  geom_tile(color="white", fill="white")+
+  #geom_density2d_filled()
+  geom_contour_filled()+
+  #geom_tile(color="white", fill="white")+
   #scale_color_manual(labels = c("T999", "T888"), values = c("blue", "red")) +
-  geom_contour()+
+  #geom_contour()+
   scale_x_continuous(breaks=seq(min(rsqcont$time_step), max(rsqcont$time_step),1))+
   scale_y_continuous(breaks=seq(min(rsqcont$age),max(rsqcont$age),1))+
   #xlim(5,30)+
-  geom_text_contour(aes(z = round(meanRSQ,2)), check_overlap = TRUE)+
+  #geom_text_contour(aes(z = round(meanRSQ,2)), check_overlap = TRUE)+
   xlab("number of years included")+ylab("age classes included")+
   #scale_x_discrete(limits=c(as.character(seq(5,30,1))))+
   theme_classic()
@@ -280,7 +242,7 @@ cols <- c("(-1.2,-1.0]"="white","(-1.0,-0.8]"="#f1eef6", "(-0.6,-0.4]" = "#d0d1e
 pxsum3<-mutate(pxsum, meanRSQcut = cut(meanRSQ, breaks=seq(-1.2,1,0.2)))
 ggplot(pxsum3, aes(age,time_step))+
   geom_tile(aes(fill=meanRSQ), show.legend = TRUE)+
-  scale_fill_viridis_c()+
+  scale_fill_viridis_c()+coord_flip()+
   #scale_fill_manual(values=cols)+
   #geom_text(color="white", size=3)+
   xlab("")+ylab("")+
