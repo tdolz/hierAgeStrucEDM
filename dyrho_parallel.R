@@ -56,7 +56,7 @@ LagCor <- function(plist){
  gplout
 }
 
-############################### 3. FUNCTION TO CORRAL THE CORR LIST OUTPUT #############################. 
+############################### 3. FUNCTION TO ORGANIZE THE LAGGED CORR OUTPUT #############################. 
 #summary stats#
 
 SumStats_corr <-function(lagfoo){
@@ -103,11 +103,11 @@ supermat <-Reduce('+',LCD)/length(LCD)  #this is the summary matrix from all the
 supermat
 }
 
-############################### 4. FUNCTION FOR DYNAMIC RHO #############################
+############################### 4. FUNCTION FOR DYNAMIC RHO 30 YEARS OF DATA ONLY #############################
 
 DYRHO <- function(plist){
-  df <-pivot_longer(plist, 2:21, names_to = "age_class")%>%filter(time_step > 299 & time_step <=400) %>%na.omit()%>% as.data.frame()
-  maxE =10
+  df <-pivot_longer(plist, 2:21, names_to = "age_class")%>%filter(time_step > 299 & time_step < 330) %>%na.omit()%>% as.data.frame()
+  maxE =5 #because sqrt of 30
   vars = colnames(plist[2:21])
   var_pairs = combn(vars, 2) # Combinations of vars, 2 at a time
   rho_matrix = array(NA, dim = c(length(vars), length(vars)), dimnames = list(vars,vars)) 
@@ -127,12 +127,20 @@ DYRHO <- function(plist){
   gplout
 }
 
-############################### 6. FUNCTION TO CORRAL THE LIST OUTPUT #############################. 
+############################### 5. FUNCTION TO ORGANIZE THE DYNAMIC RHO OUTPUT #############################. 
 #summary stats#
+SumStats_dy <-function(dyfoo){
 dsum <-lapply(dyfoo, `[`, "summary")
-dsum <-as.data.frame(dsum)
-names(dsum)<-c("mean","sd")
-dsum <- rownames_to_column(dsum,var="iter")
+dstats<-matrix(nrow=100,ncol=2)
+for (i in 1:length(dsum)){
+  dstats[i,1]<-dsum[[i]]$summary[1]
+  dstats[i,2]<-dsum[[i]]$summary[2]
+}
+dstats <-as.data.frame(dstats)
+names(dstats)<-c("mean","sd")
+dstats <- rownames_to_column(dstats,var="iter")
+dstats
+
 
 #correlation matrix --> collapse into one summary correlation matrix. 
 DC <-lapply(dyfoo, `[`, "rho_matrix")
@@ -150,12 +158,25 @@ for (i in 1:length(DC)){
 }
 dyrhomat_sum <-as.data.frame(cbind(dcmeans,dcsd))
 names(dyrhomat_sum)<-c('mean_dyrho',"sd_dyrho")
+dyrhomat_sum
+dystats <-bind_cols(dstats,dyrhomat_sum)
+}
+
+Supermat_dyrho <-function(dyfoo){
+  #correlation matrix --> collapse into one summary correlation matrix. 
+  DC <-lapply(dyfoo, `[`, "rho_matrix")
+  
+  #combine the matrices
+  LCD <-list()
+  for(i in 1:length(DC)){
+    LCD[[i]]<-DC[[i]]$rho_matrix
+  }
+  supermat <-Reduce('+',LCD)/length(LCD)  #this is the summary matrix from all the iterations
+  supermat
+}
 
 
-
-
-
-
+############################################## 6. APPLY ##################################################################################
 
 ############################### SIM 1 #############################
 ### Apply Corr function ###
@@ -166,14 +187,78 @@ lagcorstats1 <-SumStats_corr(lagfoo)
 lagcormatrix1 <-Supermat_corr(lagfoo)
 
 ### Apply Dyrho function ####
-### organize function output ###
-### write csv ####
-
-
-
-############################### 6. APPLY THE FUNCTION  #############################
-ptest2 <-DYRHO(preylist[[1]])
-# test mclapply function
 numCores = detectCores()
-system.time(dyfoo <-mclapply(preylist, DYRHO, mc.cores=numCores))
+system.time(dyfoo <-mclapply(preylist1, DYRHO, mc.cores=numCores))
+### organize function output ###
+dyrhostats1 <-SumStats_dy(dyfoo)
+dyrhomatrix1 <-Supermat_dyrho(dyfoo)
+#######################################################################################
+
+
+############################### SIM 2 #############################
+### Apply Corr function ###
+numCores = detectCores()
+system.time(lagfoo <-mclapply(preylist2, LagCor, mc.cores=numCores))
+### organize function output ####
+lagcorstats2 <-SumStats_corr(lagfoo)
+lagcormatrix2 <-Supermat_corr(lagfoo)
+
+### Apply Dyrho function ####
+numCores = detectCores()
+system.time(dyfoo <-mclapply(preylist2, DYRHO, mc.cores=numCores))
+### organize function output ###
+dyrhostats2 <-SumStats_dy(dyfoo)
+dyrhomatrix2 <-Supermat_dyrho(dyfoo)
+#######################################################################################
+
+
+############################### SIM 3 #############################
+### Apply Corr function ###
+numCores = detectCores()
+system.time(lagfoo <-mclapply(preylist3, LagCor, mc.cores=numCores))
+### organize function output ####
+lagcorstats3 <-SumStats_corr(lagfoo)
+lagcormatrix3 <-Supermat_corr(lagfoo)
+
+### Apply Dyrho function ####
+numCores = detectCores()
+system.time(dyfoo <-mclapply(preylist3, DYRHO, mc.cores=numCores))
+### organize function output ###
+dyrhostats3 <-SumStats_dy(dyfoo)
+dyrhomatrix3 <-Supermat_dyrho(dyfoo)
+#######################################################################################
+
+############################################## 7. ORGANIZE & SAVE THE CSVS #######################################
+
+#combine lag stats into one csv
+lagcorstats1 <-mutate(lagcorstats1, sim="I")
+lagcorstats2 <-mutate(lagcorstats1, sim="II")
+lagcorstats3 <-mutate(lagcorstats1, sim="III")
+lagcorstats <-bind_rows(lagcorstats1,lagcorstats2,lagcorstats3)
+#write csv
+write.csv(lagcorstats, "lagged_correlation_sim_stats.csv")
+
+#combine lagged cor supermatrix into one csv
+lcm1 <-as.data.frame(lagcormatrix1)%>%mutate(sim="I")
+lcm2 <-as.data.frame(lagcormatrix2)%>%mutate(sim="II")
+lcm3 <-as.data.frame(lagcormatrix3)%>%mutate(sim="III")
+lcm <-bind_rows(lcm1,lcm2,lcm3)
+#write csv
+write.csv(lcm, "lagged_correlation_supermatrices.csv")
+
+#combine dyrho stats into one csv
+dyrhostats1 <-mutate(dyrhostats1, sim="I")
+dyrhostats2 <-mutate(dyrhostats1, sim="II")
+dyrhostats3 <-mutate(dyrhostats1, sim="III")
+dyrhostats <-bind_rows(dyrhostats1,dyrhostats2,dyrhostats3)
+#write csv
+write.csv(dyrhostats, "dyrho_sim_stats.csv")
+
+#combine lagged cor supermatrix into one csv
+drm1 <-as.data.frame(dyrhomatrix1)%>%mutate(sim="I")
+drm2 <-as.data.frame(dyrhomatrix2)%>%mutate(sim="II")
+drm3 <-as.data.frame(dyrhomatrix3)%>%mutate(sim="III")
+drm <-bind_rows(drm1,drm2,drm3)
+#write csv
+write.csv(drm, "dyrho_supermatrices.csv")
 
