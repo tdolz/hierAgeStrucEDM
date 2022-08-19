@@ -31,8 +31,6 @@ library(plotly)
 **Import parallel crossfits data**
 ```{r}
 #the following CSVs were created on the 50 core server using the script parallelCrossfit.R. 
-
-pxfit_test <-read.csv("testfoo.csv", header=TRUE)
 pxfit1 <-read.csv("crossfits_sim1.csv",header=TRUE)
 pxfit2 <-read.csv("crossfits_sim2.csv",header=TRUE)
 pxfit3 <-read.csv("crossfits_sim3.csv",header=TRUE)
