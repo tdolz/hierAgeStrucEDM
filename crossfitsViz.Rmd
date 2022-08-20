@@ -16,7 +16,7 @@ library(purrr)
 library(ggplot2)
 library(Metrics)
 library(corrplot)
-library(kableExtra)
+#library(kableExtra)
 library(metR)
 library(cowplot)
 library(grid)
@@ -35,7 +35,8 @@ pxfit1 <-read.csv("crossfits_sim1.csv",header=TRUE)
 pxfit2 <-read.csv("crossfits_sim2.csv",header=TRUE)
 pxfit3 <-read.csv("crossfits_sim3.csv",header=TRUE)
 
-pxfits <-pxfit3
+pxfits <-pxfit1
+test_length = 10
 ```
 
 
@@ -64,7 +65,7 @@ metname <-"mean r-squared"
 
 #max z back into a matrix
 rhomat <-pivot_wider(pxsum, id_cols="time_step",names_from = "age",values_from = met)
-rhomat <-rhomat %>% remove_rownames %>% mutate(time_step =time_step - 10) %>% column_to_rownames(var="time_step") #when using the 10 year sequential
+rhomat <-rhomat %>% remove_rownames %>% mutate(time_step =time_step - test_length) %>% column_to_rownames(var="time_step") #when using the 10 year sequential
 #rhomat <-rhomat %>% remove_rownames %>% column_to_rownames(var="time_step")
 rhomat <-as.matrix(rhomat)
 ```
