@@ -46,8 +46,8 @@ LagCor <- function(plist){
  M <-cor(Pblock2, use="pairwise.complete.obs")
  #corrplot(M, type="upper", method="color", title="", mar=c(0,0,2,0), addCoef.col = 'black', diag=F,tl.col = "black")
  
- corlist <-t(combn(colnames(M),2))
- M2 =data.frame(corlist, dist=M[corlist])
+ M2 =data.frame(col=colnames(M)[col(M)], row=rownames(M)[row(M)], dist=c(M))
+ M2 <-na.omit(M2)
  length(M2$dist) == length(unique(M2$dist))
  vec <-c(mean(M2$dist),sd(M2$dist))
  #outputs
@@ -120,7 +120,9 @@ DYRHO <- function(plist){
     rho_matrix[var_pairs[1,i], var_pairs[2,i]] = fit1_rho
   }
   #mean and SD of dynamic correlation
-  vec <-c(mean(!is.na(rho_matrix)),sd(as.vector(!is.na(rho_matrix))))
+  M2 =data.frame(col=colnames(rho_matrix)[col(rho_matrix)], row=rownames(rho_matrix)[row(rho_matrix)], dist=c(rho_matrix))
+  M2 <-na.omit(M2)
+  vec <-c(mean(M2$dist),sd(M2$dist))
   #outputs
   gplout <-list(vec,rho_matrix)
   names(gplout) <-c("summary","rho_matrix")
@@ -232,8 +234,8 @@ dyrhomatrix3 <-Supermat_dyrho(dyfoo)
 
 #combine lag stats into one csv
 lagcorstats1 <-mutate(lagcorstats1, sim="I")
-lagcorstats2 <-mutate(lagcorstats1, sim="II")
-lagcorstats3 <-mutate(lagcorstats1, sim="III")
+lagcorstats2 <-mutate(lagcorstats2, sim="II")
+lagcorstats3 <-mutate(lagcorstats3, sim="III")
 lagcorstats <-bind_rows(lagcorstats1,lagcorstats2,lagcorstats3)
 #write csv
 write.csv(lagcorstats, "lagged_correlation_sim_stats.csv")
@@ -248,8 +250,8 @@ write.csv(lcm, "lagged_correlation_supermatrices.csv")
 
 #combine dyrho stats into one csv
 dyrhostats1 <-mutate(dyrhostats1, sim="I")
-dyrhostats2 <-mutate(dyrhostats1, sim="II")
-dyrhostats3 <-mutate(dyrhostats1, sim="III")
+dyrhostats2 <-mutate(dyrhostats2, sim="II")
+dyrhostats3 <-mutate(dyrhostats3, sim="III")
 dyrhostats <-bind_rows(dyrhostats1,dyrhostats2,dyrhostats3)
 #write csv
 write.csv(dyrhostats, "dyrho_sim_stats.csv")

@@ -27,8 +27,8 @@ library(gridExtra)
 **IMPORT DATA**
 ```{r}
 #read in empirical data
-#emp <-read.csv("mixedage_fitstats_emp.csv", header=T)
-emp <-read.csv("mixedage_fitstats_empLOG.csv", header=T)## LOG SCALE VERSION
+#emp <-read.csv("mixedage_fitstats_empE5.csv", header=T) #maxE = 5 unlogged numbers at age version
+emp <-read.csv("mixedage_fitstats_empLOG.csv", header=T)## LOG SCALE VERSION E=9 for SB, E=6 for KRFC, biomass at age for sb
 emp["Hierarchal"]<-"Hierarchical"
 
 #read in simulated data - all are logged
