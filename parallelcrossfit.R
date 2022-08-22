@@ -8,6 +8,8 @@
 # The original crossfits are found in "SpeciesCrossfitsxxl.R"
 # the purpose of this is to run the crossfits 100x each to create confidence intervals on the rsquared and rmse scores.
 
+### 8/20/22 implementing a 5 year testing set (as a test)
+
 #packages
 library(MASS)
 library(dplyr)
@@ -41,6 +43,11 @@ preylist3 <- preylist3 %>% split(f=preylist3$index)%>%lapply(function(x) x[!name
 # updated 11.28.2021 after discussion with Tanya 
 
 Xfit <-function(plist){
+
+   #test set length
+   test_length =5
+   #test_length =10
+   
  #inputs
  plist<-as.data.frame(plist)
  plist <-mutate(plist, value=log(value)) #REMEMBER TO TURN THIS ON AND OFF
@@ -48,7 +55,7 @@ Xfit <-function(plist){
  plist<-filter(plist, age_class !="V21") # we're not doing the plus group ever 
  agelist <-unique(plist$age_class)
  agelist <-agelist[c(1,12,14,15,16,17,18,19,20,2,3,4,5,6,7,8,9,10,11,13)] #NEW! sort this 
- tslengthlist <-seq(15,40,1) # because last ten years is predicting. 
+ tslengthlist <-seq(test_length+5,(30+test_length),1) # test set length
  var_pairs=expand.grid(agelist, tslengthlist)
  var_pairs = as.matrix(t(var_pairs))
  var_pairs[2,]=gsub(" ", "", var_pairs[2,], fixed = TRUE)
@@ -72,7 +79,7 @@ Xfit <-function(plist){
   
   #### MAX E RULES #########
   #OPTION 1 (new)
-  realts <-length(unique(df$time_step))-10
+  realts <-length(unique(df$time_step))-test_length
   maxE=round(sqrt(realts))
   
   #OPTION 2 (new)
@@ -91,8 +98,8 @@ Xfit <-function(plist){
    #NEW with MAKE LAGS 
    dfLags = makelags(data=df, y="value", pop="age_class", E=maxE, tau=1)
    dfdata = cbind(df,dfLags)
-   df.train = filter(dfdata, time_step < (max(time_step)-10))
-   df.test = filter(dfdata, time_step >= (max(time_step)-10))
+   df.train = filter(dfdata, time_step < (max(time_step)-test_length))
+   df.test = filter(dfdata, time_step >= (max(time_step)-test_length))
    fit1 = fitGP(data=df.train, y="value", x=colnames(dfLags), pop="age_class", newdata=df.test, predictmethod = "loo", scaling="local")
    
    #extract rmse and r-squared
@@ -178,7 +185,8 @@ for(t in 1:length(paraXfit)){
 crossfits1<-bind_rows(paraXfit)%>%as.data.frame()
 
 ##Write to CSV##
-write.csv(crossfits1, "crossfits_sim1.csv") 
+#write.csv(crossfits1, "crossfits_sim1.csv") # 10 year testing set
+write.csv(crossfits1, "crossfits_sim1_5test.csv") # 5 year testing set
 
 ############################# SIM II ############################################
 
