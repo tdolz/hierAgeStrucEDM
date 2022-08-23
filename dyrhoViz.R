@@ -22,8 +22,11 @@ lagcor_matrix <-read.csv("lagged_correlation_supermatrices.csv",header=T)
 
 
 ########################## SUMMARY STATISTICS #################################################################################
-sumstats_dy <-dyrhostats %>%group_by(sim)%>% summarize(mn=mean(mean), sem =sd(mean), msd=mean(sd_dyrho))
+sumstats_dy <-dystats %>%group_by(sim)%>% summarize(mn=mean(mean), sem =sd(mean), msd=mean(sd_dyrho))
 sumstats_dy 
+
+sumstats_lagcor <-lagcorstats %>%group_by(sim)%>% summarize(mn=mean(mean_pairwisedist), sem =sd(mean_pairwisedist), msd=mean(sd_pairwisedist))
+sumstats_lagcor 
 
 ######################## LAGGED CORRELATION CORRPLOT #########################################################################
 lagged_ages <-c("age1 (t+0)", "age2 (t+1)","age3(t+2)","age4 (t+3)","age5 (t+4)","age6 (t+5)","age7 (t+6)","age8 (t+7)",
