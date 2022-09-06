@@ -252,8 +252,8 @@ ggsave("sim1_ycvsprevyr.png")
 preylists <-preylists %>%
  filter(time_step > 299)
 
-write.csv(preylists,"Simulation1_data.csv")
-write.csv(recnoises,"sim1_info.csv")
+write.csv(preylists,"simulated_data/Simulation1_data.csv")
+write.csv(recnoises,"simulated_data/sim1_info.csv")
 
 
 ###############################Simulation II############################################################################
@@ -524,8 +524,8 @@ ggsave("sim2_ycvsprevyr.png")
 preylists <-preylists %>%
   filter(time_step > 299)
 
-write.csv(preylists,"Simulation2_data.csv")
-write.csv(recnoises,"sim2_info.csv")
+write.csv(preylists,"simulated_data/Simulation2_data.csv")
+write.csv(recnoises,"simulated_data/sim2_info.csv")
 
 ################################ Simulation III ##################################################
 #### formerly known as TWO SPP XXL SHORT OSC PREYLISTS
@@ -831,7 +831,7 @@ preylists <-preylists %>%
   filter(time_step > 299)
 
 #write.csv(preylists,"Simulation3_dataNEW.csv")
-write.csv(preylists,"Simulation3_data.csv")
+write.csv(preylists,"simulated_data/Simulation3_data.csv")
 #write.csv(recnoises,"sim3_infoNEW.csv")
-write.csv(recnoises,"sim3_info.csv")
+write.csv(recnoises,"simulated_data/sim3_info.csv")
 
