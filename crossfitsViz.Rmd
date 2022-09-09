@@ -119,16 +119,16 @@ fig2 <-plot_ly(type="contour",
                colorscale='Jet',
                #colorscale = list(seq(0.78,1.0,0.02),c("#dc2f02","#d00000","#9d0208","#6a040f","#370617","#03071e")),
                #coloraxis="coloraxis",
-               colorbar=list(tickfont=list(size=14)),
+               colorbar=list(tickfont=list(size=16)),
                reversescale =F,
                autocontour = F, #contours = list(start = -1.2, end = 1.0,size = 0.2),
                x=~rownames(rhomat2), y=~colnames(rhomat2), z=~t(rhomat2))%>%
-      colorbar(title=metname, size=14)%>%
+      colorbar(title=metname, size=16)%>%
       layout(xaxis = list(title = 'years included',
-                          tickfont = list(size = 14), titlefont = list(size = 14),
+                          tickfont = list(size = 16), titlefont = list(size = 16),
                           nticks=10),
                                      yaxis = list(title = 'number age classes included',
-                                                  tickfont = list(size = 14),titlefont = list(size = 14)),
+                                                  tickfont = list(size = 16),titlefont = list(size = 16)),
                                      zaxis = list(title = 'r-squared',nticks=10, range=c(0,1)))
                                     # zaxis = list(title = metname))   
  
