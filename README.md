@@ -1,7 +1,74 @@
-# hierAgeStrucEDM
+# EDM with Age Structured Data
 
-List of files for Github:
+This repository contains the data and code associated with the paper "Age structure augments the predictive power of time series for fisheries and conservation" by Tara E. Dolan, Eric P. Palkovacs, Tanya L. Rogers, and Stephan B. Munch.
 
+**Tara, I recommend organizing the files into subfolders, so it's easier to find things. You will need to update the input/output file paths in the scripts (I did some but not all). Delete anything that is old or otherwise needs to be deleted (e.g. no longer in paper, file vs fileNEW, etc.). For stuff you want to keep around but not put on github, make a subfolder called 'archive' and put the files in there. I have listed 'archive' in the gitignore, so the files will be deleted from the online repo, but will still be retained locally on your computer. If you have questions, let me know.**
+
+- `analysis_functions.R` contains functions used in scripts for this project. 
+- `make_simulation_data.R` does 100 runs of simulations 1-3. 
+    - Inputs: 
+        - simulated_data/predmatrix_shortosc.csv (age specific predation of predators on prey)
+        - simulated_data/preymatrix.csv (age specific predation of prey on predator eggs)
+        - analysis_functions.R
+    - Outputs: 
+        - simulated_data/
+             - Simulation1_data.csv = the resulting simulated data.
+             - Simulation2_data.csv = the resulting simulated data.
+             - Simulation3_data.csv = the resulting simulated data.
+             - sim1_info.csv = metadata about simulation 1 runs, including recruitment noise, etc. 
+             - sim2_info.csv = metadata about simulation 2 runs, including recruitment noise, etc. 
+             - sim3_info.csv = metadata about simulation 3 runs, including recruitment noise, etc. 
+        - figures/
+             - sim1_post_burnin.png = plot of each age class over time (mean over 100 runs) after burn in period. 
+             - sim1_pre_burnin.png = plot of each age class over time (mean over 100 runs) before burn in period.
+             - sim1_run1.png = plot of each age class over time (first run only) after burn in. 
+             - sim1_ycvsitself.png = plot of each year class vs. itself one time step previously
+             - sim1_ycvsprevyr.png = plot of each year class vs. previous age class (same time step). 
+             - sim2_post_burnin.png = plot of each age class over time (mean over 100 runs) after burn in period. 
+             - sim2_pre_burnin.png = plot of each age class over time (mean over 100 runs) before burn in period.
+             - sim2_run1.png = plot of each age class over time (first run only) after burn in. 
+             - sim2_ycvsitself.png = plot of each year class vs. itself one time step previously
+             - sim2_ycvsprevyr.png = plot of each year class vs. previous age class (same time step). 
+             - sim3_post_burnin.png = plot of each age class over time (mean over 100 runs) after burn in period. 
+             - sim3_pre_burnin.png = plot of each age class over time (mean over 100 runs) before burn in period.
+             - sim3_run1.png = plot of each age class over time (first run only) after burn in. 
+             - sim3_ycvsitself.png = plot of each year class vs. itself one time step previously
+             - sim3_ycvsprevyr.png = plot of each year class vs. previous age class (same time step). 
+             
+Analyses             
+
+- `modelcomparison.R` does the analysis that compares hierarchical, mixed age, and single age, and total abundance models for the simulated data
+    - Inputs: simulated_data/
+        - Simulation1_data.csv
+        - Simulation2_data.csv
+        - Simulation3_data.csv
+    - Outputs: modelcomparison_outputs/
+        - modelcomparison_simulation_out.csv
+- `tslength_ageclass.R` add description (**I think this is parallelCrossfit.R? Please rename as appropriate.**)
+    - Inputs:
+    - Outputs:
+- `pairwise_rho.R` obtains pairwise rho values between age classes for simulated and empirical data (**I think this is dyrho_parallel.R? Please rename as appropriate.**)
+    - Inputs:  
+    - Outputs:  
+- `empirical_analysis.Rmd` does the analysis that compares hierarchical, mixed age, and single age, and total abundance models for the empirical data
+    - Inputs:  
+    - Outputs:  
+
+Visualization
+
+- `SimObsPredvis.R` plots observed and predicted values for a hierarchical GP fit to simulated datasets.
+   - Inputs: simulated_data/
+        - Simulation1_data.csv
+        - Simulation2_data.csv
+        - Simulation3_data.csv
+   - Outputs: figures/
+        - ?
+- etc.
+
+## Previous structure (delete)
+
+- dyrho_parallel.R calculates the lagged correlation and pairwise dynamic rho for each simulation. 
+=======
 ##### Updates 9/6/22 here ###
 - simulation_sandbox.R = a place to play with the simulations. Stores the old parameter values for the April 2022 draft of the manuscript and also provides space for new values to try. 
     - Inputs: analysis_functions.R
@@ -47,6 +114,7 @@ List of files for Github:
         - “Boxplot_sumhier_TA.png” - a box plot of the individual hierarchical fits summed to total abundance compared to total abundance from 100 data comparison
         - “Boxplot_hier.png” - a box plot of the overall hierarchical fits vs time series length. 
 - empirical_analysis.Rmd = does the empirical data analysis, the dynamic correlation plots for the empirical data and some visualizations of empirical data only. Outputs the csv that is used for the mixed analysis visualization. 
+
     - Inputs: 
         - "CTtrawlabundanceage19872017.csv" = striped bass abundance index
         - "SB_dataming.csv" = biomass and numbers at age

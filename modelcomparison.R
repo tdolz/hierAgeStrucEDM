@@ -134,15 +134,15 @@ MIXM30 <- function(plist,maxE){
 }
 
 ################################## IMPORT THE DATA #############################################
-preylist1 <-read.csv("Simulation1_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
+preylist1 <-read.csv("simulated_data/Simulation1_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
   pivot_longer(3:22, names_to = "age_class")%>%as.data.frame()
 preylist1 <-split(preylist1, f=preylist1$index)
 
-preylist2 <-read.csv("Simulation2_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
+preylist2 <-read.csv("simulated_data/Simulation2_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
   pivot_longer(3:23, names_to = "age_class")%>%as.data.frame()%>%filter(age_class !="V21")
 preylist2 <-split(preylist2, f=preylist2$index)
 
-preylist3 <-read.csv("Simulation3_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
+preylist3 <-read.csv("simulated_data/Simulation3_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
   pivot_longer(3:22, names_to = "age_class")%>%as.data.frame()
 preylist3 <-split(preylist3, f=preylist3$index)
 
@@ -288,4 +288,4 @@ Output30_3 <-parafoo3 %>% map(~as_tibble(.)) %>% bind_rows(.id="index")%>%as.dat
 
 MixedAgeOUT <-bind_rows(Output30_1,Output30_2,Output30_3)
 
-write.csv(MixedAgeOUT,"mixedageoutnew.csv")
+write.csv(MixedAgeOUT,"modelcomparison_outputs/modelcomparison_simulation_out.csv")
