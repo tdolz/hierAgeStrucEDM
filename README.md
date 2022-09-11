@@ -68,102 +68,84 @@ Visualization
 ## Previous structure (delete)
 
 - dyrho_parallel.R calculates the lagged correlation and pairwise dynamic rho for each simulation. 
-    - Inputs: 
-        - predmatrix_shortosc.csv
-        - preymatrix.csv
+=======
+##### Updates 9/6/22 here ###
+- simulation_sandbox.R = a place to play with the simulations. Stores the old parameter values for the April 2022 draft of the manuscript and also provides space for new values to try. 
+    - Inputs: analysis_functions.R
+- analysis_functions.R = a source for functions used in this project
+- make_simulation_data.R = runs each simulation and produces the preylist files. 
+    - Inputs: analysis_functions.R
     - Outputs: 
-        - "laggedcorrsumstatsone.csv" - results of the analysis performed on data from simulation I
-        - "laggedcorrsumstats2XXL.csv" - results of the analysis performed on data from simulation III
-        - "laggedcorrsumstats2MED.csv" - results of the analysis performed on data from simulation III
-- mixedAgeloop.R Comparison of hierarchical, mixed age and individual age models
-    - Inputs:
-        - predmatrix_shortosc.csv
-        - preymatrix.csv
-    - Outputs: 
-        - "mixedtest302sppMED.csv"
-        - "mixedtest301spp.csv"
-        - "mixedtest302sppXXL.csv"
-- parallelCrossfit.R creates the analysis for the contour plots - tries GP for different combinations of time series and number of age classes
-        - Inputs:
-            - predmatrix_shortosc.csv
-            - preymatrix.csv
+        - Simulation1_data.csv - data frame of 100 simulation runs of simulation 1
+        - sim1_info.csv
+        - Simulation2_data.csv
+        - sim2_info.csv
+        - Simultion2_data.csv
+        - sim3_info.csv
+- mixedAgeloop.R = compares single age, total abundance and hierarchical aged models
+        - Inputs: Simulation1_data.csv, Simulation2_data.csv, Simulation3_data.csv
+        - Outputs: mixedAgeOutnew.csv
+- SimObsPredVis.R = makes the plots of data from 1st (of 100) run of the simulation with model over it for the simulations. 
+        - Inputs: Simulation1_data.csv, Simulation2_data.csv, Simulation3_data.csv
         - Outputs:
-            - "preylists2sppXXLSHORTOSC.csv" - output from 100 runs of simulation III where params were restricted to create shorter oscillations. 
-            - "crossfits2sppXXLSHORTOSC.csv” - - results from each pairwise combination of age classes and time series for simulation III where params were restricted to create shorter oscillations. 
-            - "crossfits2sppXXLSHORTOSC_LN.csv"- results from each pairwise combination of age classes and time series for simulation III where params were restricted to create shorter oscillations, but logging transforming the data. 
-            - "preylists2sppXXL.csv" - output from 100 runs of simulation III 
-            - "crossfits2sppXXL.csv" -- results from each pairwise combination of age classes and time series for simulation III 
-            - "preylists2sppMED.csv"- output from 100 runs of simulation II
-            - "crossfits2sppMED_LN.csv" -- results from each pairwise combination of age classes and time series for simulation II, where values were log transformed. 
-            - "preylistsOneSpp.csv" - output from 100 runs of simulation I
-            - "crossfitsONESPP_LN.csv”-- results from each pairwise combination of age classes and time series for simulation I, where values were log transformed. 
-- twosppXXLShortOscloop.R - the 100 points test fit to 100 runs for all the simulations. 
-    - Inputs:
-        - predmatrix_shortosc.csv
-        - preymatrix.csv
+            - Sim1obspreds_age.png a graph of the hierarchical model overlaying 30 years of data from one simulation run. (For the appendix). 
+            - Sim1obspreds_agg.png  a graph of the hierarchical and total abundance model overlaying 30 years of data from one simulation run. 
+            - Sim2obspreds_age.png a graph of the hierarchical model overlaying 30 years of data from one simulation run. (For the appendix). 
+            - Sim2obspreds_agg.png  a graph of the hierarchical and total abundance model overlaying 30 years of data from one simulation run. 
+            - Sim3obspreds_age.png a graph of the hierarchical model overlaying 30 years of data from one simulation run. (For the appendix). 
+            - Sim3obspreds_agg.png  a graph of the hierarchical and total abundance model overlaying 30 years of data from one simulation run. 
+            - Aggregatepreds20ages.png is a graph of the total abundance data, hierarchical model fit and total abundance model fit from one simulation run. 
+- hundred_data_comp.R = splits the data into 5 ages, 20 years, 4 ages 25 years, 10 ages 10 years and 20 ages 5 years. Hierarchical model of each. Total abundance model of each, single age model of each.
+        - Inputs: analysis_functions.R, Simulation1_data.csv, Simulation2_data.csv, Simulation3_data.csv
+        - Outputs: Sim1Phis_100data.csv, Sim2Phis_100data.csv, Sim2Phis_100data.csv
+        - Outputs: Sim1fitstats_100data.csv, Sim2fitstats_100data.csv, Sim3fitstats_100data.csv
+- thirty_ptscomp.R = does the 30 years and 15 years of 20 age classes from all simulations total abundance, overall hierarchical fit and summed hierarchical fit comparison. Ultimately we did not include this analysis as we felt it was redundant to the hundred data comparison. 
+        - Inputs: Simulation1_data.csv, Simulation2_data.csv, Simulation3_data.csv
+        - Outputs: thirtypoints.csv, fifteenpoints.csv
+- Sim_Data_vis100.Rmd = creates the visualizations for the 100 data points comparisons and the figures tanya requested.
+    - Inputs: Sim1Phis_100data.csv, Sim2Phis_100data.csv, Sim2Phis_100data.csv
+    - Outputs: phiplot.png - a graph of the mean value of phi from the hierarchical model from the hundred data comp script. 
+    - Inputs: thirtypoints.csv or fifteenpoints.csv
+    - Outputs: “thirtypointsfig.png”, thirty points comparison figure. 30 points of 20 ages, all three simulations r2 or RMSE. There are also the “thirtypointsI.png” “thirtypointsII.png” and “thirtypointsIII.png”, which are separated out for the different simulations. Ultimately decided not to include this figure. 
+    - Inputs: im1fitstats_100data.csv, Sim2fitstats_100data.csv, Sim3fitstats_100data.csv
     - Outputs: 
-        - "preylists2sppMEDGPLOOP100.csv" - output from 100 runs of simulation II
-        - "preylistsONESPPGPLOOP100.csv" - output from 100 runs of simulation I
-        - "preylists2sppXXLSHORTOSC_GPLOOP100.csv" - - output from 100 runs of simulation III where parameters are restricted to shorten oscillations. 
-        - "TwoSppMEDPhisLN100.csv" - saving every hyper parameter value from all fits of LN transformed data from simulation II for the 100 data points analysis. 
-        - "TwoSppMEDFitstatsLN100.csv" - all fit stats (r-squared, RMSE, etc.) from the LN transformed data from simulation II for the 100 data points analysis. 
-        - "ONEsppPhisLN100.csv"- saving every hyper parameter value from all fits of LN transformed data from simulation I for the 100 data points analysis. 
-        - "OneSppFitstatsLN100.csv" - - all fit stats (r-squared, RMSE, etc.) from the LN transformed data from simulation I for the 100 data points analysis. 
-        - "TwoSppXLPhisLN100.csv" -  saving every hyper parameter value from all fits of LN transformed data from simulation III for the 100 data points analysis. 
-        - "TwoSppXLFitstatsLN100.csv" - - all fit stats (r-squared, RMSE, etc.) from the LN transformed data from simulation III for the 100 data points analysis.
+        - cplotattempt4sumhier.png - a grob plot of the summed hierarchical fits compared to total abundance from 100 data comparison
+        - “Boxplot_Hier_TA.png” - a box plot of the overall hierarchical fits compared to total abundance from 100 data comparison
+        - “Boxplot_sumhier_TA.png” - a box plot of the individual hierarchical fits summed to total abundance compared to total abundance from 100 data comparison
+        - “Boxplot_hier.png” - a box plot of the overall hierarchical fits vs time series length. 
+- empirical_analysis.Rmd = does the empirical data analysis, the dynamic correlation plots for the empirical data and some visualizations of empirical data only. Outputs the csv that is used for the mixed analysis visualization. 
 
-- NEWsimulationDataVis.Rmd - produces the graphs for most of the simulated and some of the empirical data. 
-    - Produce the Phi Plots (Supplementary Figure S2) 
-        - Output: phiplot.png
-        - Inputs: 
-            - ONEsppPhisLN100.csv
-            - TwoSppMEDPhisLN100.csv
-            - TwoSppXLPhisLN100.csv
-    - Produce the box plots for the 100 data points test, 
-        - Outputs: 
-            - "cplotattempt.png”, 
-            - "cplotattempt4.png”, 
-            - “ntotallengthsTanya.png" 
-            - “ntotallengthsTanya2.png”, 
-            - "meandynamicrho.png"
-        - Inputs: 
-            - OneSppFitstatsLN100.csv
-            - TwoSppMEDFitstatsLN100.csv
-            - TwoSppXLFitstatsLN100.csv 
-        - Produce the mixed, hierarchical, and single age comparison plots: 
-            - Outputs
-                - tinyviolins.pdf (and other versions of the same) 
-            - Inputs: 
-                - mixedage_fitstats_empLog.csv
-                - "mixedtest301spp.csv"
-                - "mixedtest302sppMED.csv"
-                - "mixedtest302sppXXL.csv"
-                - OneSppFitstatsLN100.csv
-                - TwoSppMEDFitstatsLN100.csv
-                - TwoSppXLFitstatsLN100.csv 
-        - Produce the contour plots
-            - Outputs: none because impossible to ggsave the plotly objects
-            - Inputs: 
-                - "crossfits2sppXXLSHORTOSC_LN.csv"
-                - "crossfits2sppMED_LN.csv"
-                - "crossfitsONESPP_LN.csv"
-        - Produce the preylist time series 
-            - Outputs: Supplementary Figure s1 "preyvisSim_ILN.png"
-            - Inputs:
-                - "preylists2sppXXLSHORTOSC.csv"
-                - "preylists2sppMED.csv"
-                - "preylistsOneSpp.csv"
-                - 
-- "BestEmbedFunctions.R" - is a list of functions used especially in the real data GP 
-- 
-- “RealDataGP.Rmd” - is the analysis and visualization of the empirical datasets
-    - Striped bass data 
-        - Inputs: "CTtrawlabundanceage19872017.csv"
-        - Outputs: 
-            - SBLaggedCOrr.png - lagged correlation plot
-            - "SBfitoverdataE9all.png" - plot of striped bass hierarchal model fit over data. 
-            - "r2ETSB.png" - fits over a grid of E and tau
-            - "SB_fitstatsE9.csv" - fit statistics (r-squared, rmse etc). For striped bass with a max embedding dimension of 9
-    - KRFC
-        - Inputs: "KRFC.csv”, "SB_dataming.csv"
-        - Outputs: 
+    - Inputs: 
+        - "CTtrawlabundanceage19872017.csv" = striped bass abundance index
+        - "SB_dataming.csv" = biomass and numbers at age
+    - Outputs: 
+        - "SB_rawData.png"  - time series of Striped bass by age
+        - "r2ETSBbiom.png” & "RMSE_ETSBbiom.png”= Tile plots of SB fits across a grid of E and Tau using R-squared and RMSE respectively.
+        - Lagged correlation and dynamic correlation plots - does not produce a .png file, but the plot may be saved manually. 
+        - "SBfitoverdataE9allAgg.png" = Hierarchical fits over data 
+        - “SB_fitstatsE9.csv” = total abundance, individual age and hierarchical fits 
+    - Inputs: 
+        - “KRFC.csv” = abundance at age of Klamath River fall chinook salmon. 
+    - Outputs: 
+        - "KRFC_rawData.png" = time series of KRFC abundance by age
+        - Lagged correlation and dynamic correlation plots - does not produce a .png file, but the plot may be saved manually. 
+        - “r2ETKRFC.png" & "RMSE_ETKRFC.png" - lagged fits across a grid of E and Tau using R-squared and RMSE respectively.
+        - “KRFC_fitstatsE6.csv” = total abundance, individual age and hierarchical fits 
+        - "KRFCfitoverdataE6all.png" = hierarchical fits over data
+    - Outputs (combined): 
+        - “mixedage_fitstats_emp.csv” and “mixedage_fitstats_empLOG.csv”  = combined csv of fits for data visualization, unlogged and logged version, respectively.  
+- mixedAgeVis.Rmd - visualizations for the mixed age analysis
+    - Inputs: "mixedage_fitstats_empLOG.csv”; "mixedageoutnew.csv"
+    - Outputs: 
+        - "MixedAge.png" - mixed age plot in 5 panels with vertical columns of points
+        - “MixedAge1.png”, MixedAge2.png, MixedAge3.png and MixedAgeBottom.png are individual panels of the MixedAge.png plot that can be assembled in InDesign. 
+        - Tinyviolins plots. The overall plot and the individual panels which can be assembled separately. 
+- parallelcrossfit.R = performs the analysis which fits a hierarchical model to every possible combination of 1-20 age classes and 15 to 30 years. This analysis is best run on a multicore server because it can take a while, but it can be run on a standard machine. 
+    - Inputs: Simulation1_data.csv, Simulation2_data.csv, Simulation3_data.csv
+    - Outputs: crossfits_sim1.csv, crossfits_sim2.csv, crossfits_sim3.csv
+- crossfitsViz.Rmd - visualizations for the parallel crossfits analysis
+    - Inputs: crossfits_sim1.csv, crossfits_sim2.csv, crossfits_sim3.csv
+    - Outputs: the parallel crossfits contour plots. These cannot be saved using ggsave. Usually I save them via screenshot.
+- dyrho_parallel.R - does the comparison of dynamic correlation and lagged correlation for the simulated data. This analysis is best run on a multicore server because it can take a while, but it can be run on a standard machine. 
+    - Inputs: Simulation1_data.csv, Simulation2_data.csv, Simulation3_data.csv
+    -  
