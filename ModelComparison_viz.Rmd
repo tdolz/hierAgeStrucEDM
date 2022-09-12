@@ -28,11 +28,11 @@ library(gridExtra)
 ```{r}
 #read in empirical data
 #emp <-read.csv("mixedage_fitstats_empE5.csv", header=T) #maxE = 5 unlogged numbers at age version
-emp <-read.csv("mixedage_fitstats_empLOG.csv", header=T)## LOG SCALE VERSION E=9 for SB, E=6 for KRFC, biomass at age for sb
+emp <-read.csv("modelcomparison_outputs/mixedage_fitstats_empLOG.csv", header=T)## LOG SCALE VERSION E=9 for SB, E=6 for KRFC, biomass at age for sb
 emp["Hierarchal"]<-"Hierarchical"
 
 #read in simulated data - all are logged
-mixsim <-read.csv("mixedageoutnew.csv", header=T)
+mixsim <-read.csv("modelcomparison_outputs/modelcomparison_simulation_out.csv", header=T)
 mixsim["Hierarchal"]<-"Hierarchical"
 ```
 
@@ -137,7 +137,8 @@ Sim1 <-mixall%>%
   panel.background = element_rect(fill = "transparent",colour = "dark grey"),
   plot.background = element_rect(fill = NA,colour = "transparent"),
   panel.border = element_rect(colour="black",fill=NA, size=0.3))
-ggsave("MixedAge1.png", width=4, height=4, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("MixedAge1.png", width=4, height=4, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("figures/MixedAge1.png", width=4, height=4, dpi=300)
 
 
 #SimII#
@@ -159,7 +160,8 @@ Sim2 <-mixall%>%
   panel.background = element_rect(fill = "transparent",colour = "dark grey"),
   plot.background = element_rect(fill = NA,colour = "transparent"),
   panel.border = element_rect(colour="black",fill=NA, size=0.3))
-ggsave("MixedAge2.png", width=4, height=4, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("MixedAge2.png", width=4, height=4, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("figures/MixedAge2.png", width=4, height=4, dpi=300)
 
 
 #SimIII#
@@ -181,7 +183,8 @@ Sim3 <-mixall%>%
   panel.background = element_rect(fill = "transparent",colour = "dark grey"),
   plot.background = element_rect(fill = NA,colour = "transparent"),
   panel.border = element_rect(colour="black",fill=NA, size=0.3))
-ggsave("MixedAge3.png", width=4, height=4, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("MixedAge3.png", width=4, height=4, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("figures/MixedAge3.png", width=4, height=4, dpi=300)
 
 
 #BOTTOM ROW
@@ -213,7 +216,8 @@ bottomrow <-mixall%>%
   plot.background = element_rect(fill = NA,colour = "transparent"),
   panel.border = element_rect(colour="black",fill=NA, size=0.3)
  )
-ggsave("MixedAgeBottom.png", width=10, height=4, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("MixedAgeBottom.png", width=10, height=4, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("figures/MixedAgeBottom.png", width=10, height=4, dpi=300)
 
 
 #
@@ -367,7 +371,8 @@ mix2%>%
   axis.title.y=element_blank(),
   axis.ticks.x=element_blank(),
         )
-ggsave("tinyviolinsI.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("tinyviolinsI.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("supplementary_figs/tinyviolinsI.png",width = 12, height = 4,dpi=300)
 #dev.off()
 
 ### II ####
@@ -392,7 +397,8 @@ mix2%>%
   axis.title.y=element_blank(),
   axis.ticks.x=element_blank(),
         )
-ggsave("tinyviolinsII.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("tinyviolinsII.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("supplementary_figs/tinyviolinsII.png",width = 12, height = 4,dpi=300)
 #dev.off()
 
 ### III ####
@@ -417,7 +423,8 @@ mix2%>%
   axis.title.y=element_blank(),
   axis.ticks.x=element_blank(),
         )
-ggsave("tinyviolinsIII.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("tinyviolinsIII.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("supplementary_figs/tinyviolinsIII.png",width = 12, height = 4,dpi=300)
 #dev.off()
 
 ### KRFC ####
@@ -442,7 +449,8 @@ mix2%>%
   axis.title.y=element_blank(),
   axis.ticks.x=element_blank(),
         )
-ggsave("tinyviolinsKRFC.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("tinyviolinsKRFC.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("supplementary_figs/tinyviolinsKRFC.png",width = 12, height = 4,dpi=300)
 #dev.off()
 
 
@@ -467,7 +475,8 @@ mix2%>%
   axis.title.x=element_text(size=14,face="bold",margin=margin(t=8,unit="pt")),
   axis.title.y=element_blank(),
         )
-ggsave("tinyviolinsSB.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("tinyviolinsSB.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("supplementary_figs/tinyviolinsSB.png",width = 12, height = 4,dpi=300)
 #dev.off()
 
 

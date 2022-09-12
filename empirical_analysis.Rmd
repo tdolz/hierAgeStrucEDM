@@ -759,8 +759,8 @@ aggfits <-rbind(fithieraggR2,fithieraggR2KRFC)%>%as.data.frame()%>%rownames_to_c
 colnames(aggfits)[2]= "R2"
 fitstats <-bind_rows(aggfits,fitstats)
 
-#write.csv(fitstats,"empirical_data/mixedage_fitstats_empE5.csv")
-#write.csv(fitstats,"mixedage_fitstats_empLOG.csv")
+write.csv(fitstats,"modelcomparison_outputs/mixedage_fitstats_empE5.csv")
+write.csv(fitstats,"modelcomparison_outputs/mixedage_fitstats_empLOG.csv")
 ```
 
 

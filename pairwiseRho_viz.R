@@ -15,10 +15,10 @@ library(RColorBrewer)
 library(viridisLite)
 
 ######################import the data#####################################################################################
-dystats <-read.csv("dyrho_sim_stats.csv",header=T)
-lagcorstats<-read.csv("lagged_correlation_sim_stats.csv",header=T)
-dyrho_matrix <-read.csv("dyrho_supermatrices.csv",header=T)
-lagcor_matrix <-read.csv("lagged_correlation_supermatrices.csv",header=T)
+dystats <-read.csv("pairwise_rho_outputs/dyrho_sim_stats.csv",header=T)
+lagcorstats<-read.csv("pairwise_rho_outputs/lagged_correlation_sim_stats.csv",header=T)
+dyrho_matrix <-read.csv("pairwise_rho_outputs/dyrho_supermatrices.csv",header=T)
+lagcor_matrix <-read.csv("pairwise_rho_outputs/lagged_correlation_supermatrices.csv",header=T)
 
 
 ########################## SUMMARY STATISTICS #################################################################################
