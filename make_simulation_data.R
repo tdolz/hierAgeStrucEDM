@@ -157,7 +157,7 @@ preylist.mean%>%
   geom_ribbon(aes(ymin=mean.value-sd.value, ymax=mean.value+sd.value), fill="grey", alpha=0.5)+
  facet_wrap(~age_class,scales="free")+
  theme_classic()
-ggsave("sim1_pre_burnin.png")
+ggsave("sim_diagnostics/sim1_pre_burnin.png")
 #ggsave("sim1_pre_burnin.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
@@ -168,7 +168,7 @@ preylist.mean%>%
   geom_ribbon(aes(ymin=mean.value-sd.value, ymax=mean.value+sd.value), fill="grey", alpha=0.5)+
  facet_wrap(~age_class,scales="free")+
  theme_classic()
-ggsave("sim1_post_burnin.png")
+ggsave("sim_diagnostics/sim1_post_burnin.png")
 #ggsave("sim1_post_burnin.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
@@ -209,7 +209,7 @@ top.grob <-textGrob("Year class vs. itself", gp=gpar(fontface="bold",col="black"
 
 mainplot <-plot_grid(row1,row2,row3,row4, nrow=4)
 grid.arrange(arrangeGrob(mainplot, left=y.grob, bottom=x.grob,top=top.grob, padding=unit(0,"line")))
-ggsave("sim1_ycvsitself.png")
+ggsave("sim_diagnostics/sim1_ycvsitself.png")
 
 ####NO LAG###
 #grob plot of each age by itself the previous year.  
@@ -245,7 +245,7 @@ top.grob <-textGrob("age vs previous age", gp=gpar(fontface="bold",col="black",f
 
 mainplot <-plot_grid(row1,row2,row3,row4, nrow=4)
 grid.arrange(arrangeGrob(mainplot, left=y.grob, bottom=x.grob,top=top.grob, padding=unit(0,"line")))
-ggsave("sim1_ycvsprevyr.png")
+ggsave("sim_diagnostics/sim1_ycvsprevyr.png")
 
 
 
@@ -420,7 +420,7 @@ preypiv%>%
   geom_line()+
   facet_wrap(~age_class,scales="free")+
   theme_classic()
-ggsave("sim2_run1.png")
+ggsave("sim_diagnostics/sim2_run1.png")
 #ggsave("sim2_run1.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
@@ -430,7 +430,7 @@ preylist.mean%>%
   geom_ribbon(aes(ymin=mean.value-sd.value, ymax=mean.value+sd.value), fill="grey", alpha=0.5)+
   facet_wrap(~age_class,scales="free")+
   theme_classic()
-ggsave("sim2_pre_burnin.png")
+ggsave("sim_diagnostics/sim2_pre_burnin.png")
 #ggsave("sim2_pre_burnin.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
@@ -441,7 +441,7 @@ preylist.mean%>%
   geom_ribbon(aes(ymin=mean.value-sd.value, ymax=mean.value+sd.value), fill="grey", alpha=0.5)+
   facet_wrap(~age_class,scales="free")+
   theme_classic()
-ggsave("sim2_post_burnin.png")
+ggsave("sim_diagnostics/sim2_post_burnin.png")
 #ggsave("sim2_post_burnin.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
@@ -482,7 +482,7 @@ top.grob <-textGrob("Year class vs. itself", gp=gpar(fontface="bold",col="black"
 
 mainplot <-plot_grid(row1,row2,row3,row4, nrow=4)
 grid.arrange(arrangeGrob(mainplot, left=y.grob, bottom=x.grob,top=top.grob, padding=unit(0,"line")))
-ggsave("sim2_ycvsitself.png")
+ggsave("sim_diagnostics/sim2_ycvsitself.png")
 
 ####NO LAG###
 #grob plot of each age by itself the previous year.  
@@ -518,7 +518,7 @@ top.grob <-textGrob("age vs previous age", gp=gpar(fontface="bold",col="black",f
 
 mainplot <-plot_grid(row1,row2,row3,row4, nrow=4)
 grid.arrange(arrangeGrob(mainplot, left=y.grob, bottom=x.grob,top=top.grob, padding=unit(0,"line")))
-ggsave("sim2_ycvsprevyr.png")
+ggsave("sim_diagnostics/sim2_ycvsprevyr.png")
 
 
 preylists <-preylists %>%
@@ -711,7 +711,7 @@ preypiv%>%
   geom_line()+
   facet_wrap(~age_class,scales="free")+
   theme_classic()
-ggsave("sim3_run1.png")
+ggsave("sim_diagnostics/sim3_run1.png")
 #ggsave("sim3_run1.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
@@ -725,7 +725,7 @@ preypiv%>%
   geom_line()+
   #facet_wrap(~age_class,scales="free")+
   theme_classic()
-ggsave("sim3_run1colors.png")
+ggsave("sim_diagnostics/sim3_run1colors.png")
 #ggsave("sim3_run1.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
@@ -735,7 +735,7 @@ preylist.mean%>%
   geom_ribbon(aes(ymin=mean.value-sd.value, ymax=mean.value+sd.value), fill="grey", alpha=0.5)+
   facet_wrap(~age_class,scales="free")+
   theme_classic()
-ggsave("sim3_pre_burnin.png")
+ggsave("sim_diagnostics/sim3_pre_burnin.png")
 #ggsave("sim3_pre_burnin.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
@@ -746,7 +746,7 @@ preylist.mean%>%
   geom_ribbon(aes(ymin=mean.value-sd.value, ymax=mean.value+sd.value), fill="grey", alpha=0.5)+
   facet_wrap(~age_class,scales="free")+
   theme_classic()
-ggsave("sim3_post_burnin.png")
+ggsave("sim_diagnostics/sim3_post_burnin.png")
 #ggsave("sim3_post_burnin.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
@@ -788,7 +788,7 @@ top.grob <-textGrob("Year class vs. itself", gp=gpar(fontface="bold",col="black"
 
 mainplot <-plot_grid(row1,row2,row3,row4, nrow=4)
 grid.arrange(arrangeGrob(mainplot, left=y.grob, bottom=x.grob,top=top.grob, padding=unit(0,"line")))
-ggsave("sim3_ycvsitself.png")
+ggsave("sim_diagnostics/sim3_ycvsitself.png")
 
 ####NO LAG###
 #grob plot of each age by itself the previous year.  
@@ -824,7 +824,7 @@ top.grob <-textGrob("age vs previous age", gp=gpar(fontface="bold",col="black",f
 
 mainplot <-plot_grid(row1,row2,row3,row4, nrow=4)
 grid.arrange(arrangeGrob(mainplot, left=y.grob, bottom=x.grob,top=top.grob, padding=unit(0,"line")))
-ggsave("sim3_ycvsprevyr.png")
+ggsave("sim_diagnostics/sim3_ycvsprevyr.png")
 
 ## SAVE 
 preylists <-preylists %>%

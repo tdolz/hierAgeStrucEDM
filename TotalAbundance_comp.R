@@ -17,11 +17,11 @@ library(parallel)
 #so you could show the distribution among replicates 
 
 #load preylists and split into lists. 
-preylist1 <-read.csv("Simulation1_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)
+preylist1 <-read.csv("simulated_data/Simulation1_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)
 preylist1 <- preylist1 %>% split(f=preylist1$index)%>%lapply(function(x) x[!names(x) %in% c("index")])
-preylist2 <-read.csv("Simulation2_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)
+preylist2 <-read.csv("simulated_data/Simulation2_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)
 preylist2 <- preylist2 %>% split(f=preylist2$index)%>%lapply(function(x) x[!names(x) %in% c("index")])
-preylist3 <-read.csv("Simulation3_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)
+preylist3 <-read.csv("simulated_data/Simulation3_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)
 preylist3 <- preylist3 %>% split(f=preylist3$index)%>%lapply(function(x) x[!names(x) %in% c("index")])
 
 #plist <-preylist1[[1]] #for troublesshooting
@@ -115,6 +115,17 @@ preystats <-pivot_longer(preystats, 2:4, names_to="approach", values_to="value")
 #write csv
 write.csv(preystats, "thirtypoints.csv")
 
+
+
+
+
+
+
+
+
+
+
+################### DEPRECATED ######################################
 ############## DOING THIS AGAIN, BUT THIS TIME 15 YEARS ###############################################################
 
 
@@ -204,4 +215,4 @@ preystats <-bind_rows(preystats1, preystats2, preystats3)
 preystats <-pivot_longer(preystats, 2:4, names_to="approach", values_to="value")%>%as.data.frame()
 
 #write csv
-write.csv(preystats, "fifteenpoints.csv")
+#write.csv(preystats, "fifteenpoints.csv")

@@ -26,13 +26,13 @@ library(pracma)
 
 
 ## Read in the simulation data & make it long format ## BUT TURN IT INTO A LIST!!! 
-preylist1 <-read.csv("Simulation1_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
+preylist1 <-read.csv("simulated_data/Simulation1_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
  pivot_longer(3:22, names_to = "age_class")%>%as.data.frame()
 preylist1 <- preylist1 %>% split(f=preylist1$index)%>%lapply(function(x) x[!names(x) %in% c("index")])
-preylist2 <-read.csv("Simulation2_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
+preylist2 <-read.csv("simulated_data/Simulation2_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
  pivot_longer(3:23, names_to = "age_class")%>%as.data.frame()
 preylist2 <- preylist2 %>% split(f=preylist2$index)%>%lapply(function(x) x[!names(x) %in% c("index")])
-preylist3 <-read.csv("Simulation3_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
+preylist3 <-read.csv("simulated_data/Simulation3_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)%>%
  pivot_longer(3:22, names_to = "age_class")%>%as.data.frame()
 preylist3 <- preylist3 %>% split(f=preylist3$index)%>%lapply(function(x) x[!names(x) %in% c("index")])
 
@@ -164,7 +164,7 @@ for(t in 1:length(foo)){
  foo[[t]] <-mutate(foo[[t]], iter=t)
 }
 testfoo<-bind_rows(foo)%>%as.data.frame()
-write.csv(testfoo,"testfoo.csv")
+#write.csv(testfoo,"testfoo.csv")
 
 ############################# SIM I ############################################
 
@@ -185,8 +185,8 @@ for(t in 1:length(paraXfit)){
 crossfits1<-bind_rows(paraXfit)%>%as.data.frame()
 
 ##Write to CSV##
-#write.csv(crossfits1, "crossfits_sim1.csv") # 10 year testing set
-write.csv(crossfits1, "crossfits_sim1_5test.csv") # 5 year testing set
+write.csv(crossfits1, "tslength_ageclass_outputs/crossfits_sim1.csv") # 10 year testing set
+#write.csv(crossfits1, "crossfits_sim1_5test.csv") # 5 year testing set
 
 ############################# SIM II ############################################
 
@@ -207,7 +207,7 @@ for(t in 1:length(paraXfit)){
 crossfits2<-bind_rows(paraXfit)%>%as.data.frame()
 
 ##Write to CSV##
-write.csv(crossfits2, "crossfits_sim2.csv") 
+write.csv(crossfits2, "tslength_ageclass_outputs/crossfits_sim2.csv") 
 
 ############################# SIM III ############################################
 
@@ -228,7 +228,7 @@ for(t in 1:length(paraXfit)){
 crossfits3<-bind_rows(paraXfit)%>%as.data.frame()
 
 ##Write to CSV##
-write.csv(crossfits3, "crossfits_sim3.csv") 
+write.csv(crossfits3, "tslength_ageclass_outputs/crossfits_sim3.csv") 
 
 
 

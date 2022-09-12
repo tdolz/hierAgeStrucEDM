@@ -92,14 +92,14 @@ this is also a 10 data points test set issue.
 
 **Import data: STRIPED BASS**  
 ```{r}
-CTAAA <- read.csv("CTtrawlabundanceage19872017.csv", header = TRUE)
+CTAAA <- read.csv("empirical_data/CTtrawlabundanceage19872017.csv", header = TRUE)
 CTAAA <-CTAAA[,2:16] #we are getting rid of the 15+ category
 ```
 
 **Optional Chunk: Multiply data by biomass or numbers at age**  
 ```{r}
 ### import the data from CTLISTS
-CTLISTSraw <-read.csv("SB_dataming.csv", header=T)
+CTLISTSraw <-read.csv("empirical_data/SB_dataming.csv", header=T)
 CTLISTS <-filter(CTLISTSraw, Year > 1986 & Year < 2018) #filter dataset to 1987-2017
 
 #everything lumped by year
@@ -224,7 +224,8 @@ ETdf %>%
        strip.background =element_rect(fill="white"),
        panel.grid.major = element_blank(), 
        panel.grid.minor = element_blank())
-ggsave("r2ETSBbiom.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("r2ETSBbiom.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("supplementary_figs/r2ETSBbiom.png")
 dev.off()
 
 #RMSE. 
@@ -244,7 +245,7 @@ ETdf %>%
        strip.background =element_rect(fill="white"),
        panel.grid.major = element_blank(), 
        panel.grid.minor = element_blank())
-ggsave("RMSE_ETSBbiom.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("supplementary_figs/RMSE_ETSBbiom.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 ```
 Decided that the best E = 9 and the best tau = 1. 
@@ -288,7 +289,7 @@ SB_fitstats#%>%
  #filter(model=="SB_ageStruc")%>%
  #kbl()%>%kable_classic(full_width = F, html_font = "Cambria")
 
-#write.csv(SB_fitstats, file="SB_fitstatsE9.csv")
+write.csv(SB_fitstats, file="empirical_data/SB_fitstatsE9.csv")
 ```
 
 **Visualize SB fits over data and combine with N total fit and additive fit**  
@@ -319,7 +320,9 @@ SBallresults%>%
  theme_classic()
 
 #ggsave("SBfitoverdataE9allAgg.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("figures/SBfitoverdataE9allAgg.png")
 #dev.off()
+
 ```
 
 ###################################################################################################################################################################################
@@ -465,7 +468,7 @@ modstatsSBsum <- na.omit(modstatsSB) %>% group_by(tslength,e_choice)%>%
 
 **read in KRFC data and format**  
 ```{r}
-KRFC <- read.csv("KRFC.csv", header = TRUE)
+KRFC <- read.csv("empirical_data/KRFC.csv", header = TRUE)
 
 ####CHANGE TO 1986 to 2016 so it will be 30 YEARS
 #escapement dataset
@@ -491,7 +494,8 @@ KRFC.esc %>%
  geom_line()+
  facet_wrap(~age_class,scales="free")+
  theme_classic()
-ggsave("KRFC_rawData.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("KRFC_rawData.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("KRFC_rawData.png")
 dev.off()
 
 ```
@@ -573,7 +577,7 @@ KRFCETdf %>%
        strip.background =element_rect(fill="white"),
        panel.grid.major = element_blank(), 
        panel.grid.minor = element_blank())
-ggsave("r2ETKRFC.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("supplementary_figs/r2ETKRFC.png")
 dev.off()
 
 #RMSE. 
@@ -594,7 +598,9 @@ KRFCETdf %>%
        panel.grid.major = element_blank(), 
        panel.grid.minor = element_blank())
 
-ggsave("RMSE_ETKRFC.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("RMSE_ETKRFC.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("supplementary_figs/RMSE_ETKRFC.png")
+
 dev.off()
 ```
 best E=6, best tau=1
@@ -631,7 +637,7 @@ KRFC_fitstats <- mutate(KRFC_ages, across(OOS_R2:df, as.numeric))%>%mutate(`age 
 KRFC_fitstats#%>% 
  #kbl()%>%kable_classic(full_width = F, html_font = "Cambria")
 
-write.csv(KRFC_fitstats, file="KRFC_fitstatsE6.csv")
+write.csv(KRFC_fitstats, file="empirical_data/KRFC_fitstatsE6.csv")
 ```
 
 
@@ -662,6 +668,7 @@ KRFCallresults%>%
  geom_point(aes(x=year, y=obs)) +
  theme_classic()
 
+ggsave("figures/KRFCfitoverdataE5all.png")
 #ggsave("KRFCfitoverdataE5all.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 #dev.off()
 ```
@@ -752,7 +759,7 @@ aggfits <-rbind(fithieraggR2,fithieraggR2KRFC)%>%as.data.frame()%>%rownames_to_c
 colnames(aggfits)[2]= "R2"
 fitstats <-bind_rows(aggfits,fitstats)
 
-#write.csv(fitstats,"mixedage_fitstats_empE5.csv")
+#write.csv(fitstats,"empirical_data/mixedage_fitstats_empE5.csv")
 #write.csv(fitstats,"mixedage_fitstats_empLOG.csv")
 ```
 

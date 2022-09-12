@@ -23,11 +23,11 @@ library(corrplot)
 ############################### 1. IMPORT AND FORMAT SIM DATA #############################
 
 ## Read in the simulation data & make it long format ## BUT TURN IT INTO A LIST!!! 
-preylist1 <-read.csv("Simulation1_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)
+preylist1 <-read.csv("simulated_data/Simulation1_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)
 preylist1 <- preylist1 %>% split(f=preylist1$index)%>%lapply(function(x) x[!names(x) %in% c("index")])
-preylist2 <-read.csv("Simulation2_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)
+preylist2 <-read.csv("simulated_data/Simulation2_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)
 preylist2 <- preylist2 %>% split(f=preylist2$index)%>%lapply(function(x) x[!names(x) %in% c("index")])
-preylist3 <-read.csv("Simulation3_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)
+preylist3 <-read.csv("simulated_data/Simulation3_data.csv", header=T,row.names=NULL)%>%dplyr::select(-X)
 preylist3 <- preylist3 %>% split(f=preylist3$index)%>%lapply(function(x) x[!names(x) %in% c("index")])
 
 
@@ -238,7 +238,7 @@ lagcorstats2 <-mutate(lagcorstats2, sim="II")
 lagcorstats3 <-mutate(lagcorstats3, sim="III")
 lagcorstats <-bind_rows(lagcorstats1,lagcorstats2,lagcorstats3)
 #write csv
-write.csv(lagcorstats, "lagged_correlation_sim_stats.csv")
+write.csv(lagcorstats, "pairwise_rho_outputs/lagged_correlation_sim_stats.csv")
 
 #combine lagged cor supermatrix into one csv
 lcm1 <-as.data.frame(lagcormatrix1)%>%mutate(sim="I")
@@ -246,7 +246,7 @@ lcm2 <-as.data.frame(lagcormatrix2)%>%mutate(sim="II")
 lcm3 <-as.data.frame(lagcormatrix3)%>%mutate(sim="III")
 lcm <-bind_rows(lcm1,lcm2,lcm3)
 #write csv
-write.csv(lcm, "lagged_correlation_supermatrices.csv")
+write.csv(lcm, "pairwise_rho_outputs/lagged_correlation_supermatrices.csv")
 
 #combine dyrho stats into one csv
 dyrhostats1 <-mutate(dyrhostats1, sim="I")
@@ -254,7 +254,7 @@ dyrhostats2 <-mutate(dyrhostats2, sim="II")
 dyrhostats3 <-mutate(dyrhostats3, sim="III")
 dyrhostats <-bind_rows(dyrhostats1,dyrhostats2,dyrhostats3)
 #write csv
-write.csv(dyrhostats, "dyrho_sim_stats.csv")
+write.csv(dyrhostats, "pairwise_rho_outputs/dyrho_sim_stats.csv")
 
 #combine lagged cor supermatrix into one csv
 drm1 <-as.data.frame(dyrhomatrix1)%>%mutate(sim="I")
@@ -262,5 +262,5 @@ drm2 <-as.data.frame(dyrhomatrix2)%>%mutate(sim="II")
 drm3 <-as.data.frame(dyrhomatrix3)%>%mutate(sim="III")
 drm <-bind_rows(drm1,drm2,drm3)
 #write csv
-write.csv(drm, "dyrho_supermatrices.csv")
+write.csv(drm, "pairwise_rho_outputs/dyrho_supermatrices.csv")
 

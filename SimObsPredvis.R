@@ -215,7 +215,7 @@ geom_line(aes(x=time_step, y=predmean), color="blue")+
  theme_classic()
  #save
  #ggsave("Sim1obspreds_age.png",height=6, width=8,dpi=300,  path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
- ggsave("Sim1obspreds_age.png",height=6, width=8,dpi=300)
+ ggsave("figures/Sim1obspreds_age.png",height=6, width=8,dpi=300)
  dev.off()
  
  p1.5res %>%
@@ -231,8 +231,8 @@ geom_line(aes(x=time_step, y=predmean), color="blue")+
          theme_classic()
  #save
  #ggsave("Sim1obspreds_agg.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
- ggsave("Sim1obspreds_agg.png")
- dev.off()
+ #ggsave("supplementary_figs/Sim1obspreds_agg.png")
+ #dev.off()
  #using the total abundance index produces an identical fit which is super annoying. 
  #so maybe don't include it (the red)
 
@@ -350,7 +350,7 @@ geom_line(aes(x=time_step, y=predmean), color="blue")+
          theme_classic()
  #save
  #ggsave("Sim2obspreds_age.png",height=6, width=8,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
- ggsave("Sim2obspreds_age.png",height=6, width=8,dpi=300)
+ ggsave("supplementary_figs/Sim2obspreds_age.png",height=6, width=8,dpi=300)
  dev.off()
  
  p2.5res %>%
@@ -365,9 +365,9 @@ geom_line(aes(x=time_step, y=predmean), color="blue")+
          facet_wrap(age_class~., scales="free")+
          theme_classic()
  #save
- ggsave("Sim2obspreds_agg.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
- ggsave("Sim2obspreds_agg.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
- dev.off()
+ #ggsave("Sim2obspreds_agg.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ #ggsave("Sim2obspreds_agg.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ #dev.off()
  #using the total abundance index produces an identical fit which is super annoying. 
  #so maybe don't include it (the red)
  
@@ -483,7 +483,7 @@ geom_line(aes(x=time_step, y=predmean), color="blue")+
          facet_wrap(age_class~., scales="free_y")+
          theme_classic()
  #save
- ggsave("Sim3obspreds_age.png", height= 6, width=8, dpi=300)
+ ggsave("supplementary_figs/Sim3obspreds_age.png", height= 6, width=8, dpi=300)
  #ggsave("Sim3obspreds_age.png", height= 6, width=8, dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
  dev.off()
  
@@ -499,9 +499,9 @@ geom_line(aes(x=time_step, y=predmean), color="blue")+
          facet_wrap(age_class~., scales="free")+
          theme_classic()
  #save
- ggsave("Sim3obspreds_agg.png")
+ #ggsave("Sim3obspreds_agg.png")
  #ggsave("Sim3obspreds_agg.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
- dev.off()
+ #dev.off()
  #using the total abundance index produces an identical fit which is super annoying. 
  #so maybe don't include it (the red)
  
@@ -530,7 +530,7 @@ aggres %>%
          #geom_line(data=aggta,aes(x=time_step, y=predmean), color="red")+
          facet_wrap(Simulation~., scales="free")+
          theme_classic()
-ggsave("aggregatepreds20ages.png", height=4, width=8)
+ggsave("supplementary_figs/aggregatepreds20ages.png", height=4, width=8)
 #ggsave("aggregatepreds20ages.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 dev.off()
 
