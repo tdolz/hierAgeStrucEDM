@@ -27,7 +27,7 @@ library(gridExtra)
 **IMPORT DATA**
 ```{r}
 #read in empirical data
-#emp <-read.csv("mixedage_fitstats_empE5.csv", header=T) #maxE = 5 unlogged numbers at age version
+#emp <-read.csv("modelcomparison_outputs/mixedage_fitstats_empE5.csv", header=T) #maxE = 5 unlogged numbers at age version
 emp <-read.csv("modelcomparison_outputs/mixedage_fitstats_empLOG.csv", header=T)## LOG SCALE VERSION E=9 for SB, E=6 for KRFC, biomass at age for sb
 emp["Hierarchal"]<-"Hierarchical"
 
@@ -364,7 +364,8 @@ mix2%>%
         #strip.background =element_rect(fill="white"),
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
-        axis.text.x = element_blank(),
+        #axis.text.x = element_blank(),
+        axis.text.x = element_text(size=13),
   axis.text.y = element_text(size=14),
   strip.text = element_text(size=14),
   axis.title.x=element_blank(),
@@ -372,7 +373,7 @@ mix2%>%
   axis.ticks.x=element_blank(),
         )
 #ggsave("tinyviolinsI.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-ggsave("supplementary_figs/tinyviolinsI.png",width = 12, height = 4,dpi=300)
+ggsave("supplementary_figs/tinyviolinsI.png",width = 15, height = 4,dpi=300)
 #dev.off()
 
 ### II ####
@@ -390,7 +391,7 @@ mix2%>%
         strip.text.x = element_blank(),
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
-        axis.text.x = element_blank(),
+        axis.text.x = element_text(size=14),
   axis.text.y = element_text(size=14),
   strip.text = element_text(size=14),
   axis.title.x=element_blank(),
@@ -398,7 +399,7 @@ mix2%>%
   axis.ticks.x=element_blank(),
         )
 #ggsave("tinyviolinsII.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-ggsave("supplementary_figs/tinyviolinsII.png",width = 12, height = 4,dpi=300)
+ggsave("supplementary_figs/tinyviolinsII.png",width = 15, height = 4,dpi=300)
 #dev.off()
 
 ### III ####
@@ -416,7 +417,7 @@ mix2%>%
         strip.text.x = element_blank(),
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
-        axis.text.x = element_blank(),
+        axis.text.x = element_text(size=14),
   axis.text.y = element_text(size=14),
   strip.text = element_text(size=14),
   axis.title.x=element_blank(),
@@ -424,7 +425,7 @@ mix2%>%
   axis.ticks.x=element_blank(),
         )
 #ggsave("tinyviolinsIII.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-ggsave("supplementary_figs/tinyviolinsIII.png",width = 12, height = 4,dpi=300)
+ggsave("supplementary_figs/tinyviolinsIII.png",width = 15, height = 4,dpi=300)
 #dev.off()
 
 ### KRFC ####
@@ -442,7 +443,7 @@ mix2%>%
         strip.text.x = element_blank(),
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
-        axis.text.x = element_blank(),
+        axis.text.x = element_text(size=14),
   axis.text.y = element_text(size=14),
   strip.text = element_text(size=14),
   axis.title.x=element_blank(),
@@ -450,7 +451,7 @@ mix2%>%
   axis.ticks.x=element_blank(),
         )
 #ggsave("tinyviolinsKRFC.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-ggsave("supplementary_figs/tinyviolinsKRFC.png",width = 12, height = 4,dpi=300)
+ggsave("supplementary_figs/tinyviolinsKRFC.png",width = 15, height = 4,dpi=300)
 #dev.off()
 
 
@@ -469,14 +470,14 @@ mix2%>%
         strip.text.x = element_blank(),
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
-        axis.text.x = element_text(size=12),
+        axis.text.x = element_text(size=14),
   axis.text.y = element_text(size=14),
   strip.text = element_text(size=14),
   axis.title.x=element_text(size=14,face="bold",margin=margin(t=8,unit="pt")),
   axis.title.y=element_blank(),
         )
 #ggsave("tinyviolinsSB.png",width = 12, height = 4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-ggsave("supplementary_figs/tinyviolinsSB.png",width = 12, height = 4,dpi=300)
+ggsave("supplementary_figs/tinyviolinsSB.png",width = 15, height = 4,dpi=300)
 #dev.off()
 
 

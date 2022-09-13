@@ -33,6 +33,7 @@ indv_age <-function(df, E){
  maxE <-E # 
  fitstats <-list()
  for (m in 1:length(ages)){
+    tryCatch({ #error catch line
   new_df <-filter(df, age_class==ages[m])
   newdfLags = makelags(data=new_df, y="value", E=maxE, tau=1)
   new_df = cbind(new_df,newdfLags)
@@ -43,6 +44,7 @@ indv_age <-function(df, E){
   mod1_out<-c(mod1$outsampfitstats, mod1$insampfitstats,as.character(ages[m]))
   names(mod1_out)<-c("OOS_R2","OOS_rmse","R2","rmse", "ln_post", "lnL_LOO","df","age class")
   fitstats[[m]] <- mod1_out
+   }, error=function(e){}) #error catch line
  }
  fitstats <-bind_rows(fitstats)%>%as.data.frame()%>%mutate(across(OOS_R2:df, as.numeric))
 }
@@ -480,9 +482,16 @@ esc.Ntotal <-mutate(esc.wide, N_total=X2+X3+X4+X5,age_class="N_total")%>%dplyr::
 
 ###CHANGE TO 1986 to 2016 so it will be 30 YEARS
 esc.wide = filter(esc.wide, Year >1985 & Year < 2017)
+
+#N_total time series#
 esc.Ntotal = filter(esc.Ntotal, Year >1983 & Year < 2017)
 KRFC.esc <-filter(KRFC.esc, calendar.yr > 1983 & calendar.yr < 2017)%>%dplyr::rename("Year"=calendar.yr, "age_class"=age, "value"=escapement)
 
+##OPTIONAL##
+#FIX THE HOLE in the N-total time series by adding all AVAILABLE age classes, even though V5 is missing in 1994
+esc.1994 <-filter(esc.wide, Year=="1994")%>%
+mutate(N_total=X2+X3+X4,age_class="N_total")%>%dplyr::select(Year, N_total, age_class)
+esc.Ntotal[9,2]<-esc.1994$N_total
 
 ```
 
@@ -611,7 +620,6 @@ best E=6, best tau=1
 maxE <-6
 
 #NTOTAL
-#manually globally scaled data
 KRFC_Ntotal_final <-fitGP(data = esc.Ntotal, y = "N_total", pop="age_class",scaling = "local", E=maxE, tau=1, predictmethod = "loo")
 
 #age structure
