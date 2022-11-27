@@ -232,6 +232,7 @@ ggsave("figures/MixedAgeBottom.png", width=10, height=4, dpi=300)
 ```
 
 
+
 **some summary stats**
 ```{r}
 mixall%>%

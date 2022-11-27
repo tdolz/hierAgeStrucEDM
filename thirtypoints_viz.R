@@ -20,9 +20,12 @@ library(ggbreak)
 points30 <-read.csv("modelcomparison_outputs/thirtypoints.csv", header=T)
 
 points30$approach <-fct_recode(points30$approach, "TA"="fit_NT_stats","HA"="fitsumStats", "Hierarchical overall"="fit_all_stats")
+points30$approach <-fct_recode(points30$approach, "Total abundance"="TA","Hierarchical aggregate"="HA")
 
 
-apocolr =c("Total Abundance"="#b2df8a","Hierarchical aggregate"="#1f78b4", "Hierarchical overall"="#a6cee3") 
+apocolr =c("Hierarchical overall"="#a6cee3","Total abundance"="#b2df8a","Hierarchical aggregate"="#1f78b4") 
+#apocolr =c("Total Abundance"="#b2df8a","Hierarchical aggregate"="#1f78b4","Hierarchical overall"="#a6cee3") 
+
 
 #if you want to change to hierarchical all instead of hierarchical summed
 #points30$approach <-fct_recode(points30$approach, "Total Abundance"="fit_NT_stats","Hierarchical"="fit_all_Stats")
@@ -57,7 +60,7 @@ points30%>%
   panel.background = element_rect(fill = "transparent",colour = "dark grey"),
   plot.background = element_rect(fill = "white",colour = "white", size=0.5),
   panel.border = element_rect(colour="black",fill=NA, size=0.3))
-
+ggsave("figures/thirtypointsfig_3.png",height=6, width=4,dpi=300)
 #ggsave("thirtypointsfig_3.png",path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 #dev.off()
 #
@@ -125,8 +128,8 @@ points30%>%
               position=position_dodge2(padding=0.5)) + 
  scale_fill_manual(values = apocolr)+
  scale_color_manual(values = apocolr)+
- #scale_y_break(c(0.5,0.7), scales=5)+
- scale_y_break(c(0.8,0.925), scales=2)+
+ #scale_y_break(c(0.8,0.925), scales=2)+
+ ylim(0.925,1)+
  ylab("")+xlab("")+
  #facet_wrap(~sim, scales="free",ncol=3)+
  #guides(fill=guide_legend(title="Analysis"), color=guide_legend(title="Analysis"))+
@@ -147,7 +150,8 @@ points30%>%
   plot.background = element_rect(fill = "white",colour = "white", size=0.5),
   panel.border = element_rect(colour="black",fill=NA, size=0.3))
 #ggsave("thirtypointsfigII_3.png",height=6, width=4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-ggsave("figures/thirtypointsfigII_3.png",height=6, width=4,dpi=300)
+#ggsave("figures/thirtypointsfigII_3.png",height=6, width=4,dpi=300)
+ggsave("figures/thirtypointsfigII_3_nobreaks.png",height=6, width=4,dpi=300)
 
 ### III
 points30%>%
@@ -163,10 +167,8 @@ points30%>%
               position=position_dodge2(padding=0.5)) + 
  scale_fill_manual(values = apocolr)+
  scale_color_manual(values = apocolr)+
- #scale_y_break(c(0.94,0.96), scales=2)+
- #scale_y_break(c(0.36,0.92), scales=5)+
- scale_y_break(c(0.94,0.975), scales=4)+
- #ylim(0.9,1)+
+ #scale_y_break(c(0.94,0.975), scales=4)+
+ ylim(0.99,1)+
  ylab("")+xlab("")+
  #facet_wrap(~sim, scales="free",ncol=3)+
  #guides(fill=guide_legend(title="Analysis"), color=guide_legend(title="Analysis"))+
@@ -186,4 +188,5 @@ points30%>%
   plot.background = element_rect(fill = "white",colour = "white", size=0.5),
   panel.border = element_rect(colour="black",fill=NA, size=0.3))
 #ggsave("thirtypointsfigIII_3.png",height=6, width=4,dpi=300, path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-ggsave("figures/thirtypointsfigIII_3.png",height=6, width=4,dpi=300)
+#ggsave("figures/thirtypointsfigIII_3.png",height=6, width=4,dpi=300)
+ggsave("figures/thirtypointsfigIII_3_nobreaks.png",height=6, width=4,dpi=300)

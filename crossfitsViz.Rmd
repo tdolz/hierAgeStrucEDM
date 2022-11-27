@@ -35,7 +35,7 @@ pxfit1 <-read.csv("tslength_ageclass_outputs/crossfits_sim1.csv",header=TRUE)
 pxfit2 <-read.csv("tslength_ageclass_outputs/crossfits_sim2.csv",header=TRUE)
 pxfit3 <-read.csv("tslength_ageclass_outputs/crossfits_sim3.csv",header=TRUE)
 
-pxfits <-pxfit1
+pxfits <-pxfit3
 test_length = 10
 ```
 
@@ -65,7 +65,10 @@ metname <-"mean r-squared"
 
 #max z back into a matrix
 rhomat <-pivot_wider(pxsum, id_cols="time_step",names_from = "age",values_from = met)
-rhomat <-rhomat %>% remove_rownames %>% mutate(time_step =time_step - test_length) %>% column_to_rownames(var="time_step") #when using the 10 year sequential
+rhomat <-rhomat %>% #remove_rownames %>%
+  mutate(time_step =time_step - test_length) 
+rhomat <-rhomat[1:26,]
+rhomat <-rhomat %>%  column_to_rownames(var="time_step") #when using the 10 year sequential
 #rhomat <-rhomat %>% remove_rownames %>% column_to_rownames(var="time_step")
 rhomat <-as.matrix(rhomat)
 ```
@@ -121,7 +124,8 @@ fig2 <-plot_ly(type="contour",
                #coloraxis="coloraxis",
                colorbar=list(tickfont=list(size=16)),
                reversescale =F,
-               autocontour = F, #contours = list(start = -1.2, end = 1.0,size = 0.2),
+               autocontour = F, 
+               #contours = list(start = 0, end = 1.0,size = 0.2), #adjust contours
                x=~rownames(rhomat2), y=~colnames(rhomat2), z=~t(rhomat2))%>%
       colorbar(title=metname, size=16)%>%
       layout(xaxis = list(title = 'years included',
@@ -139,6 +143,35 @@ fig2 <-plot_ly(type="contour",
 
 fig2
 ```
+
+**smaller increments**
+```{r}
+rhomat2 <-rhomat[1:11,] 
+tr2 <-t(rhomat2)
+tr2 <-tr2[1:20,]
+rownames(tr2)<-1:20
+colnames(tr2)<-5:15
+
+#zoom in 
+fig2 <-plot_ly(type="contour",
+               colorscale='Jet',
+               autocontour = F, 
+               contours = list(start = 0, end = 1.0,size = 0.05), #adjust contours
+               x=~5:15, y=~1:20, z=~tr2)%>%
+      colorbar(title=metname, size=16)%>%
+      layout(xaxis = list(title = 'years included',
+                          tickfont = list(size = 16), titlefont = list(size = 16),
+                          nticks=10),
+                                     yaxis = list(title = 'number of age classes included',
+                                                  tickfont = list(size = 16),titlefont = list(size = 16)),
+                                     zaxis = list(title = 'r-squared',nticks=10, range=c(0,1)))
+                                    # zaxis = list(title = metname))   
+
+fig2
+```
+
+
+
 
 ##### MESSING AROUND ######
 
