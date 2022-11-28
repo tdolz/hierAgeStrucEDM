@@ -59,16 +59,16 @@ Analyses
         - Simulation2_data.csv
         - Simulation3_data.csv
     - Outputs:  pairwise_rho_outputs/
-        -lagged_correlation_supermatrices.csv 
-        -lagged_correlation_sim_stats.csv
-        -dyrho_sim_stats.csv
-        -dyrho_supermatrices.csv
-- TotalAbundance_comp.R  Takes a subset of the simulated time series comprise of 30 years and 20 age classes and compares fitting a model trained on an index of total abundance (summed total of all age classes prior to model input) to a hierarchical model fit to all 20 age classes with the resulting predictions for each age class summed a posteriori. 
-      - Inputs: simulated_data/
+        - lagged_correlation_supermatrices.csv 
+        - lagged_correlation_sim_stats.csv
+        - dyrho_sim_stats.csv
+        - dyrho_supermatrices.csv
+- `TotalAbundance_comp.R`  Takes a subset of the simulated time series comprise of 30 years and 20 age classes and compares fitting a model trained on an index of total abundance (summed total of all age classes prior to model input) to a hierarchical model fit to all 20 age classes with the resulting predictions for each age class summed a posteriori. 
+    - Inputs: simulated_data/
         - Simulation1_data.csv
         - Simulation2_data.csv
         - Simulation3_data.csv
-      - Outputs: modelcomparison_outputs/thirtypoints.csv
+    - Outputs: modelcomparison_outputs/thirtypoints.csv
         
 - `empirical_analysis.Rmd` fits models to empirical data and visualizes model fits. does the analysis that compares hierarchical, mixed age, and single age, and total abundance models for the empirical data. Does the pairwise rho analysis for the empirical data and visualises those fits. 
     - Inputs:  empirical_data/
@@ -110,15 +110,15 @@ Visualization
         - crossfits_sim3.csv
     - Outputs: None because you cannot use ggsave with plotly (that I know of), but it produces the plots for Figure 4 and supplementary figure S4, which can be manually saved. 
 
-- pairwiseRho_viz.R visualizes the outputs from pairwise_rho.R
+- `pairwiseRho_viz.R` visualizes the outputs from pairwise_rho.R
     - Inputs:  pairwise_rho_outputs/
-        -lagged_correlation_supermatrices.csv 
-        -lagged_correlation_sim_stats.csv
-        -dyrho_sim_stats.csv
-        -dyrho_supermatrices.csv
+        - lagged_correlation_supermatrices.csv 
+        - lagged_correlation_sim_stats.csv
+        - dyrho_sim_stats.csv
+        - dyrho_supermatrices.csv
     - Outputs: None because you cannot use ggsave with corrplots (that I know of), but it produces the plots for supplementary figure S5, which can be manually saved.
 
-- ModelComparison_viz.Rmd - visualizes the model comparison analysis from modelcomparison.R (for simulations) and empirical_data_analysis.Rmd (for empirical data).
+- `ModelComparison_viz.Rmd` - visualizes the model comparison analysis from modelcomparison.R (for simulations) and empirical_data_analysis.Rmd (for empirical data).
     - Inputs: modelcomparison_outputs/ 
         - modelcomparison_simulation_out.csv
         - mixedage_fitstats_empLOG.csv
@@ -132,14 +132,14 @@ Visualization
         - tinyviolinsI.png, tinyviolinsII.png, tinyviolinsIII.png
         - tinyviolinsKRFC.png, tinyviolinsSB.png
 
-- thirtypoints_viz.R visualizes the outputs of the SimObsPredViz.R and creates the components of Figure 2
-    -Inputs: modelcomparison_outputs/ 
+- `thirtypoints_viz.R` visualizes the outputs of the SimObsPredViz.R and creates the components of Figure 2
+    - Inputs: modelcomparison_outputs/ 
         - thirtypoints.csv
     - Outputs: figures/
         - thirtypointsfigI_3.png
         - thirtypointsfigII_3.png
         - thirtypointsfigIII_3.png
-    - 
+    
         
 misc
 
@@ -147,4 +147,4 @@ misc
 - Simulation fitstats: (`Sim1fitstats_100data.csv`, `Sim2fitstats_100data.csv`, `Sim3fitstats_100data.csv`)
 - hundred_data_comp.R is a analysis that was dropped from the publication. Compares performance for models trained on 100 data points allocated one of five ways. 
         - Outputs (deprecated): Sim1Phis_100data.csv, Sim2Phis_100data.csv, Sim3Phis_100data.csv,
-- Sim_Data_Vis100.Rmd visualizes the outputs of hundred_data_comp.R and, previously, SimObsPredViz. This is deprecated. 
+- `Sim_Data_Vis100.Rmd` visualizes the outputs of hundred_data_comp.R and, previously, SimObsPredViz. This is deprecated. 
