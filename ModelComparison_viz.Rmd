@@ -28,7 +28,12 @@ library(gridExtra)
 ```{r}
 #read in empirical data
 #emp <-read.csv("modelcomparison_outputs/mixedage_fitstats_empE5.csv", header=T) #maxE = 5 unlogged numbers at age version
-emp <-read.csv("modelcomparison_outputs/mixedage_fitstats_empLOG.csv", header=T)## LOG SCALE VERSION E=9 for SB, E=6 for KRFC, biomass at age for sb
+#emp <-read.csv("modelcomparison_outputs/mixedage_fitstats_empE5.csv", header=T) #maxE = 5 unlogged numbers at age version E=9
+#emp <-read.csv("modelcomparison_outputs/mixedage_fitstats_empLOG.csv", header=T)## LOG SCALE VERSION E=5 for SB, E=6 for KRFC, biomass at age for sb
+#emp <-read.csv("modelcomparison_outputs/mixedage_fitstats_empE10_biom.csv", header=T)
+#emp <-read.csv("modelcomparison_outputs/mixedage_fitstats_empE9_nobiom.csv", header=T)
+emp <-read.csv("modelcomparison_outputs/mixedage_fitstats_empE9_Logbiom.csv", header=T)
+
 emp["Hierarchal"]<-"Hierarchical"
 
 #read in simulated data - all are logged
@@ -200,6 +205,7 @@ bottomrow <-mixall%>%
               # position = position_dodge2(), 
             # size = 2, shape=19) +
  ylab("")+xlab("")+
+  ylim(-1,1)+
   facet_wrap(~species, scales="free_y")+
   theme(
   axis.text.x = element_text(size=12),

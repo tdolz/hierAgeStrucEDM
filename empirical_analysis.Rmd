@@ -228,7 +228,8 @@ ETdf %>%
        panel.grid.minor = element_blank())
 #ggsave("r2ETSBbiom.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
 ggsave("supplementary_figs/r2ETSBbiom10.png")
-dev.off()
+#ggsave("supplementary_figs/r2ETSBbiom10LOG.png")
+#dev.off()
 
 #RMSE. 
 ETdf %>%
@@ -248,6 +249,7 @@ ETdf %>%
        panel.grid.major = element_blank(), 
        panel.grid.minor = element_blank())
 ggsave("supplementary_figs/RMSE_ETSBbiom10.png")
+#ggsave("supplementary_figs/RMSE_ETSBbiom10LOG.png")
 dev.off()
 ```
 Decided that the best E = 9 and the best tau = 1. 
@@ -292,7 +294,8 @@ SB_fitstats#%>%
  #kbl()%>%kable_classic(full_width = F, html_font = "Cambria")
 
 #write.csv(SB_fitstats, file="empirical_data/SB_fitstatsE9.csv")
-write.csv(SB_fitstats, file="empirical_data/SB_fitstatsE5.csv")
+#write.csv(SB_fitstats, file="empirical_data/SB_fitstatsE5.csv")
+#write.csv(SB_fitstats, file="empirical_data/SB_fitstatsE5LOG.csv")
 ```
 
 **Visualize SB fits over data and combine with N total fit and additive fit**  
@@ -322,8 +325,9 @@ SBallresults%>%
  geom_point(aes(x=year, y=obs)) +
  theme_classic()
 
-#ggsave("SBfitoverdataE9allAgg.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-ggsave("figures/SBfitoverdataE5allAgg.png")
+
+#ggsave("figures/SBfitoverdataE5allAgg.png")
+#ggsave("figures/SBfitoverdataE5allAggLOG.png")
 #dev.off()
 
 ```
@@ -359,10 +363,10 @@ sd(rho_matrixSB[!is.na(rho_matrixSB)])
 
 **SB: COMPARE HIERARCHICAL MIXED-AGE AND SINGLE-AGE APPROACHES**
 ```{r}
-maxE <-5 #previously E=9
+maxE <-9 #previously E=9
 
 #Individual age GP for SB
-SB_ages <-indv_age(pivSB, E=5)%>%mutate(model="SB_indvAge")
+SB_ages <-indv_age(pivSB, E=10)%>%mutate(model="SB_indvAge")
 #mixed age GP for SB
 SB_mixed <-mixed_age(pivSB,maxE)%>%mutate(model="SB_mixedAge")
 #hierarchical model, but extract individual age info.. somehow. 
@@ -646,7 +650,8 @@ KRFC_fitstats <- mutate(KRFC_ages, across(OOS_R2:df, as.numeric))%>%mutate(`age 
 KRFC_fitstats#%>% 
  #kbl()%>%kable_classic(full_width = F, html_font = "Cambria")
 
-write.csv(KRFC_fitstats, file="empirical_data/KRFC_fitstatsE6.csv")
+#write.csv(KRFC_fitstats, file="empirical_data/KRFC_fitstatsE6.csv")
+#write.csv(KRFC_fitstats, file="empirical_data/KRFC_fitstatsE6LOG.csv")
 ```
 
 
@@ -677,8 +682,8 @@ KRFCallresults%>%
  geom_point(aes(x=year, y=obs)) +
  theme_classic()
 
-ggsave("figures/KRFCfitoverdataE5all.png")
-#ggsave("KRFCfitoverdataE5all.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+#ggsave("figures/KRFCfitoverdataE5all.png")
+#ggsave("figures/KRFCfitoverdataE5allLOG.png")
 #dev.off()
 ```
 
@@ -753,7 +758,7 @@ fithieraggR2KRFC <-getR2(obs=fithieragg$obs, pred=fithieragg$predmean.x)
 **COMBINE WITH SB FITSTATS AND EXPORT FOR DATA VIS** 
 # we are not doing this here because it will be combined with the simulation data and done in Sim_data_vis later. 
 ```{r}
-fitstats <-bind_rows(fitstats_KRFCHier,fitstats_SBHier,fitstats_KRFCIndvAge,fitstats_SBIndvAge,fitstats_KRFCMixed,fitstats_SBMixed)
+fitstats <-bind_rows(fitstats_KRFCHier,fitstats_SBHier,fitstats_KRFCIndvAge,fitstats_SBIndvAge,fitstats_KRFCMixed,fitstats_SBMixed)%>%select(-`age class`)
 
 KRFC_fitstats <-mutate(KRFC_fitstats, species="Chinook Salmon")
 SB_fitstats <-mutate(SB_fitstats, species="Striped Bass")
@@ -768,8 +773,11 @@ aggfits <-rbind(fithieraggR2,fithieraggR2KRFC)%>%as.data.frame()%>%rownames_to_c
 colnames(aggfits)[2]= "R2"
 fitstats <-bind_rows(aggfits,fitstats)
 
-write.csv(fitstats,"modelcomparison_outputs/mixedage_fitstats_empE5.csv")
-write.csv(fitstats,"modelcomparison_outputs/mixedage_fitstats_empLOG.csv")
+#write.csv(fitstats,"modelcomparison_outputs/mixedage_fitstats_empE5.csv")
+#write.csv(fitstats,"modelcomparison_outputs/mixedage_fitstats_empLOG.csv")
+#write.csv(fitstats,"modelcomparison_outputs/mixedage_fitstats_empE10_biom.csv")
+#write.csv(fitstats,"modelcomparison_outputs/mixedage_fitstats_empE9_nobiom.csv")
+write.csv(fitstats,"modelcomparison_outputs/mixedage_fitstats_empE9_Logbiom.csv")
 ```
 
 
