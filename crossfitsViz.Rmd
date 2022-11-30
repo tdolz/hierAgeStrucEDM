@@ -35,7 +35,7 @@ pxfit1 <-read.csv("tslength_ageclass_outputs/crossfits_sim1.csv",header=TRUE)
 pxfit2 <-read.csv("tslength_ageclass_outputs/crossfits_sim2.csv",header=TRUE)
 pxfit3 <-read.csv("tslength_ageclass_outputs/crossfits_sim3.csv",header=TRUE)
 
-pxfits <-pxfit1 #CHANGE THIS
+pxfits <-pxfit3 #CHANGE THIS
 test_length = 10
 ```
 
