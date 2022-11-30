@@ -180,7 +180,7 @@ this is so we can decide the best E and Tau to use. We can use R-squared or RMSE
 Do not run every time. 
 ```{r}
 #loop to try hierarchical GPs on every combination of E and tau. 
-Ees <-seq(2,10,1)
+Ees <-seq(1,10,1)
 taus <-seq(1,3,1)
 var_pairs = expand.grid(Ees, taus) # Combinations of vars, 2 at a time
 ETdf <-matrix(nrow=dim(var_pairs)[1],ncol=4)
@@ -211,11 +211,11 @@ names(ETdf)<-c("E","tau","OOS_R2","OOS_RMSE")
 ### Plot
 #R- squared. 
 ETdf %>%
- filter(E != 10)%>%
+ #filter(E != 10)%>%
  ggplot(aes(E,tau,label=round(OOS_R2,2)))+
  geom_tile(aes(fill=OOS_R2), show.legend = TRUE)+
  scale_fill_gradient(low="white",high="blue")+
- scale_x_discrete(limits=seq(2,9,1))+
+ scale_x_discrete(limits=seq(1,10,1))+
  geom_text()+
  xlab("embedding dimension")+ylab("tau")+
  guides(fill=guide_colorbar(title="r-squared"))+
@@ -227,16 +227,16 @@ ETdf %>%
        panel.grid.major = element_blank(), 
        panel.grid.minor = element_blank())
 #ggsave("r2ETSBbiom.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-ggsave("supplementary_figs/r2ETSBbiom.png")
+ggsave("supplementary_figs/r2ETSBbiom10.png")
 dev.off()
 
 #RMSE. 
 ETdf %>%
- filter(E != 10)%>%
+ #filter(E != 10)%>%
  ggplot(aes(E,tau,label=round(OOS_RMSE,2)))+
  geom_tile(aes(fill=OOS_RMSE), show.legend = TRUE)+
  scale_fill_gradient(low="blue",high="white")+
- scale_x_discrete(limits=seq(2,9,1))+
+ scale_x_discrete(limits=seq(1,10,1))+
  geom_text()+
  xlab("embedding dimension")+ylab("tau")+
  guides(fill=guide_colorbar(title="RMSE"))+
@@ -247,14 +247,14 @@ ETdf %>%
        strip.background =element_rect(fill="white"),
        panel.grid.major = element_blank(), 
        panel.grid.minor = element_blank())
-ggsave("supplementary_figs/RMSE_ETSBbiom.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
+ggsave("supplementary_figs/RMSE_ETSBbiom10.png")
 dev.off()
 ```
 Decided that the best E = 9 and the best tau = 1. 
 
 **FIT SB MODELS and extract fitstats**  
 ```{r}
-maxE <-9
+maxE <-5 #previously E=9
 
 #NTOTAL
 #manually globally scaled data
@@ -291,7 +291,8 @@ SB_fitstats#%>%
  #filter(model=="SB_ageStruc")%>%
  #kbl()%>%kable_classic(full_width = F, html_font = "Cambria")
 
-write.csv(SB_fitstats, file="empirical_data/SB_fitstatsE9.csv")
+#write.csv(SB_fitstats, file="empirical_data/SB_fitstatsE9.csv")
+write.csv(SB_fitstats, file="empirical_data/SB_fitstatsE5.csv")
 ```
 
 **Visualize SB fits over data and combine with N total fit and additive fit**  
@@ -322,7 +323,7 @@ SBallresults%>%
  theme_classic()
 
 #ggsave("SBfitoverdataE9allAgg.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-ggsave("figures/SBfitoverdataE9allAgg.png")
+ggsave("figures/SBfitoverdataE5allAgg.png")
 #dev.off()
 
 ```
@@ -332,7 +333,7 @@ ggsave("figures/SBfitoverdataE9allAgg.png")
 **PAIRWISE DYNAMIC CORRELATION STRIPED BASS**  
 the corrplot output will not save with ggsave() so you need to remember to manually save it.
 ```{r}
-maxE =9
+maxE =5 #previously E= 9
 vars = colnames(CTAAA[2:15])
 var_pairs = combn(vars, 2) # Combinations of vars, 2 at a time
 rho_matrixSB = array(NA, dim = c(length(vars), length(vars)), dimnames = list(vars,vars)) 
@@ -358,10 +359,10 @@ sd(rho_matrixSB[!is.na(rho_matrixSB)])
 
 **SB: COMPARE HIERARCHICAL MIXED-AGE AND SINGLE-AGE APPROACHES**
 ```{r}
-maxE <-9
+maxE <-5 #previously E=9
 
 #Individual age GP for SB
-SB_ages <-indv_age(pivSB, E=9)%>%mutate(model="SB_indvAge")
+SB_ages <-indv_age(pivSB, E=5)%>%mutate(model="SB_indvAge")
 #mixed age GP for SB
 SB_mixed <-mixed_age(pivSB,maxE)%>%mutate(model="SB_mixedAge")
 #hierarchical model, but extract individual age info.. somehow. 
@@ -540,7 +541,7 @@ esc.Ntotal=mutate(esc.Ntotal,N_total=log(N_total+1))
 
 **GRID OF E AND TAU**  
 ```{r}
-Ees <-seq(2,10,1)
+Ees <-seq(1,10,1)
 taus <-seq(1,3,1)
 var_pairs = expand.grid(Ees, taus) # Combinations of vars, 2 at a time
 KRFCETdf <-matrix(nrow=dim(var_pairs)[1],ncol=4)
@@ -550,7 +551,7 @@ r2matrixKRFC = array(NA, dim = c(length(Ees), length(taus)), dimnames = list(Ees
 rmsematrixKRFC = array(NA, dim = c(length(Ees), length(taus)), dimnames = list(Ees,taus)) 
 for (i in 1:nrow(var_pairs)) {
  try({
-  fitKRFC <-fitGP(data = KRFC.esc, yd = "value", pop="age_class",scaling = "local", E=var_pairs[i,1], tau=var_pairs[i,2], predictmethod = "loo")
+  fitKRFC <-fitGP(data = KRFC.esc, y = "value", pop="age_class",scaling = "local", E=var_pairs[i,1], tau=var_pairs[i,2], predictmethod = "loo")
   fitKRFC_r2 <-fitKRFC$outsampfitstats[[1]]
   fitKRFC_rmse <-fitKRFC$outsampfitstats[[2]]
   r2matrixKRFC[var_pairs[i,1], var_pairs[i,2]] = fitKRFC_r2
@@ -571,11 +572,11 @@ names(KRFCETdf)<-c("E","tau","OOS_R2","OOS_RMSE")
 
 #R- squared. 
 KRFCETdf %>%
- filter(E != 10)%>%
+ #filter(E != 10)%>%
  ggplot(aes(E,tau,label=round(OOS_R2,2)))+
  geom_tile(aes(fill=OOS_R2), show.legend = TRUE)+
  scale_fill_gradient(low="white",high="blue")+
- scale_x_discrete(limits=seq(2,9,1))+
+ scale_x_discrete(limits=seq(1,10,1))+
  geom_text()+
  xlab("embedding dimension")+ylab("tau")+
  guides(fill=guide_colorbar(title="r-squared"))+
@@ -586,16 +587,16 @@ KRFCETdf %>%
        strip.background =element_rect(fill="white"),
        panel.grid.major = element_blank(), 
        panel.grid.minor = element_blank())
-ggsave("supplementary_figs/r2ETKRFC.png")
+ggsave("supplementary_figs/r2ETKRFC10.png")
 dev.off()
 
 #RMSE. 
 KRFCETdf %>%
- filter(E != 10)%>%
+ #filter(E != 10)%>%
  ggplot(aes(E,tau,label=round(OOS_RMSE)))+
  geom_tile(aes(fill=OOS_RMSE), show.legend = TRUE)+
  scale_fill_gradient(low="blue",high="white")+
- scale_x_discrete(limits=seq(2,9,1))+
+ scale_x_discrete(limits=seq(1,10,1))+
  geom_text()+
  xlab("embedding dimension")+ylab("tau")+
  guides(fill=guide_colorbar(title="RMSE"))+
@@ -608,7 +609,7 @@ KRFCETdf %>%
        panel.grid.minor = element_blank())
 
 #ggsave("RMSE_ETKRFC.png", path="/Users/tdolan/documents/postdoc/age structure/agestructfigs")
-ggsave("supplementary_figs/RMSE_ETKRFC.png")
+ggsave("supplementary_figs/RMSE_ETKRFC10.png")
 
 dev.off()
 ```
