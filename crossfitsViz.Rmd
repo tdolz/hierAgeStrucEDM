@@ -35,7 +35,7 @@ pxfit1 <-read.csv("tslength_ageclass_outputs/crossfits_sim1.csv",header=TRUE)
 pxfit2 <-read.csv("tslength_ageclass_outputs/crossfits_sim2.csv",header=TRUE)
 pxfit3 <-read.csv("tslength_ageclass_outputs/crossfits_sim3.csv",header=TRUE)
 
-pxfits <-pxfit3
+pxfits <-pxfit1 #CHANGE THIS
 test_length = 10
 ```
 
@@ -73,76 +73,31 @@ rhomat <-rhomat %>%  column_to_rownames(var="time_step") #when using the 10 year
 rhomat <-as.matrix(rhomat)
 ```
 
-**contour plot**  
+**zoomed out**
 ```{r}
-z_data = t(rhomat)
-
-contours <- list(
-    showlabels = TRUE,
-    start = floor(min(unlist(z_data))), #the min for sim III full data is -1.078, so lets go to -1.1, the max is 0.999758, 
-    end = ceiling(max(unlist(z_data))),
-    labelfont = list(size = 20, color = "black"))
-
-#whole plot
-fig1 <-plot_ly(type="contour",
-               contours = list(showlabels = TRUE),
-               #contours = contours,
-               #colorscale='Jet',
-               #coloraxis="coloraxis",
-               #colorscale = list(c(-1.2,-1.0,-0.8,-0.6,-0.5,-0.4,-0.2,0,0.1,0.4,0.6,0.8,0.9,1.0)),
-               #colorscale = list(seq(0.78,1.0,0.02),c("#dc2f02","#d00000","#9d0208","#6a040f","#370617","#03071e")),
-               colorbar=list(tickfont=list(size=14)),
-               reversescale =F,
-               autocontour = F, #contours = list(start = -1.2, end = 1.0,size = 0.2),
-               x=~rownames(rhomat), y=~colnames(rhomat), z=~t(rhomat))%>%
-      colorbar(title=metname, size=14)%>%
-      layout(xaxis = list(title = 'years included',tickfont = list(size = 14),titlefont = list(size = 14),
-                          #nticks=25,range=c(5,30)),
-                          nticks=10),
-                                     yaxis = list(title = 'number age classes included',
-                                                  tickfont = list(size = 14),titlefont = list(size = 14)),
-                                     zaxis = list(title = 'r-squared',nticks=10, range=c(0,1),tickfont = list(size = 14)))
-                                    # zaxis = list(title = metname))   
-fig1
-```
-
-**Zoom in on contour plot**
-```{r}
-#zooming in
-rhomat2 <-rhomat[1:11,] #5-15  
-#rhomat2 <-rhomat[6:11,1:10] #10-15 years, 1-10 ages  
-#rhomat <-rhomat[11:16,1:10] #11-16 years, 1-10 ages  #for the 2 spp med
-
-
+tr2 <-t(rhomat)
+tr2 <-tr2[1:20,]
+rownames(tr2)<-1:20
+colnames(tr2)<-5:30
 
 #zoom in 
-fig2 <-plot_ly(type="contour",
-               contours = list(showlabels = TRUE),
-               #contours = contours,
-               colorscale='Jet',
-               #colorscale = list(seq(0.78,1.0,0.02),c("#dc2f02","#d00000","#9d0208","#6a040f","#370617","#03071e")),
-               #coloraxis="coloraxis",
-               colorbar=list(tickfont=list(size=16)),
-               reversescale =F,
+fig1 <-plot_ly(type="contour",
+               colorscale='Viridis',
                autocontour = F, 
-               #contours = list(start = 0, end = 1.0,size = 0.2), #adjust contours
-               x=~rownames(rhomat2), y=~colnames(rhomat2), z=~t(rhomat2))%>%
+               contours = list(start = 0, end = 1.0,size = 0.05), #adjust contours
+               x=~5:15, y=~1:20, z=~tr2)%>%
       colorbar(title=metname, size=16)%>%
       layout(xaxis = list(title = 'years included',
                           tickfont = list(size = 16), titlefont = list(size = 16),
                           nticks=10),
-                                     yaxis = list(title = 'number age classes included',
+                                     yaxis = list(title = 'number of age classes included',
                                                   tickfont = list(size = 16),titlefont = list(size = 16)),
                                      zaxis = list(title = 'r-squared',nticks=10, range=c(0,1)))
                                     # zaxis = list(title = metname))   
- 
-#fig <- subplot(fig1, fig2)
-#fig <- fig %>% layout(coloraxis=list(colorscale='Jet'))
 
-
-
-fig2
+fig1
 ```
+
 
 **smaller increments**
 ```{r}
